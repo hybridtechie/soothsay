@@ -12,7 +12,7 @@
 Soothsay verifies AI-agent instruction files — `CLAUDE.md`, `AGENTS.md`, `SKILL.md`, subagent definitions, cursor rules, READMEs — against the **actual state of your repository**, and fails CI when the docs lie.
 
 ```
-$ npx soothsay check
+$ npx @njtp/soothsay check
 
 soothsay check
 
@@ -40,8 +40,8 @@ Full design rationale in [VISION.md](VISION.md).
 ## Install
 
 ```bash
-npm install --save-dev soothsay    # or: pnpm add -D soothsay
-npx soothsay check                 # zero config required
+npm install --save-dev @njtp/soothsay    # or: pnpm add -D @njtp/soothsay
+npx soothsay check                       # zero config required
 ```
 
 Requires Node ≥ 20.
@@ -116,7 +116,7 @@ Finds what only a model can: cross-file prose contradictions, vague instructions
 
 ```yaml
 # .github/workflows/soothsay.yml
-- run: npx soothsay check --github
+- run: npx @njtp/soothsay check --github
 ```
 
 `--github` emits GitHub annotations so findings appear inline on the PR diff. Exit code is 1 only for **high-confidence errors** (use `--strict` to fail on warnings too) — confidence tiering exists precisely so CI doesn't cry wolf.

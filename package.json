@@ -1,5 +1,5 @@
 {
-  "name": "soothsay",
+  "name": "@njtp/soothsay",
   "version": "0.1.0",
   "description": "Your agent docs make claims. Soothsay proves them. Verifies CLAUDE.md, AGENTS.md, SKILL.md and agent config files against the actual codebase.",
   "keywords": [
@@ -28,6 +28,9 @@
   },
   "bin": {
     "soothsay": "dist/cli.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
