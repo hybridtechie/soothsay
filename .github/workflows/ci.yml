@@ -1,10 +1,14 @@
 name: CI
 
+# Run the test suite on every push (any branch) and every pull request.
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
+
+# Cancel superseded runs on the same ref so rapid pushes don't pile up.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
 
 jobs:
   test:

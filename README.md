@@ -1,11 +1,17 @@
-# soothsay
+<h1 align="center">soothsay</h1>
 
-> Your agent docs make claims. **Soothsay proves them.**
+<p align="center"><b>Your agent docs make claims. Soothsay proves them.</b></p>
 
-[![CI](https://github.com/hybridtechie/soothsay/actions/workflows/ci.yml/badge.svg)](https://github.com/hybridtechie/soothsay/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/soothsay.svg)](https://www.npmjs.com/package/soothsay)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Node >= 20](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org)
+<p align="center">
+  <a href="https://github.com/hybridtechie/soothsay/actions/workflows/ci.yml"><img src="https://github.com/hybridtechie/soothsay/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://www.npmjs.com/package/@njtp/soothsay"><img src="https://img.shields.io/npm/v/@njtp/soothsay.svg" alt="npm version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg" alt="Node >= 20"></a>
+</p>
+
+<p align="center">
+  <a href="https://hybridtechie.github.io/soothsay/"><img src="https://hybridtechie.github.io/soothsay/soothsay-onepager.svg" alt="soothsay one-pager — verify your agent docs against the actual state of your repository" width="620"></a>
+</p>
 
 *Sooth* (n., Old English): **truth**. A soothsayer is, literally, a truth-teller.
 
