@@ -1,0 +1,63 @@
+{
+  "name": "soothsay",
+  "version": "0.1.0",
+  "description": "Your agent docs make claims. Soothsay proves them. Verifies CLAUDE.md, AGENTS.md, SKILL.md and agent config files against the actual codebase.",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "agents",
+    "markdown",
+    "lint",
+    "documentation",
+    "drift",
+    "ci",
+    "CLAUDE.md",
+    "AGENTS.md"
+  ],
+  "license": "MIT",
+  "author": "hybridtechie",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hybridtechie/soothsay.git"
+  },
+  "homepage": "https://hybridtechie.github.io/soothsay/",
+  "bugs": "https://github.com/hybridtechie/soothsay/issues",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "soothsay": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "VISION.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    ".claude-plugin",
+    "commands",
+    "skills",
+    "action.yml"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.2",
+    "picomatch": "^4.0.2",
+    "yaml": "^2.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/picomatch": "^3.0.1",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}

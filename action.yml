@@ -1,0 +1,29 @@
+name: 'soothsay'
+description: 'Verify agent docs (CLAUDE.md, AGENTS.md, SKILL.md) against the actual codebase. Fails CI when the docs lie.'
+branding:
+  icon: 'check-circle'
+  color: 'purple'
+inputs:
+  path:
+    description: 'Directory to check'
+    required: false
+    default: '.'
+  strict:
+    description: 'Fail on warnings too'
+    required: false
+    default: 'false'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run soothsay
+      shell: bash
+      # Inputs are passed via env so values can't break out of shell quoting.
+      env:
+        SOOTHSAY_PATH: ${{ inputs.path }}
+        SOOTHSAY_STRICT: ${{ inputs.strict }}
+      run: |
+        if [ "$SOOTHSAY_STRICT" = "true" ]; then
+          npx --yes soothsay check "$SOOTHSAY_PATH" --github --strict
+        else
+          npx --yes soothsay check "$SOOTHSAY_PATH" --github
+        fi

@@ -1,0 +1,8 @@
+{
+  "name": "soothsay",
+  "description": "Verify agent docs (CLAUDE.md, AGENTS.md, SKILL.md) against the actual codebase — catches stale claims, missing files, permission contradictions.",
+  "version": "0.1.0",
+  "author": {
+    "name": "hybridtechie"
+  }
+}

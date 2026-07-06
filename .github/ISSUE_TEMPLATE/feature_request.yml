@@ -1,0 +1,57 @@
+name: Feature request
+description: Propose a new check, assert type, or CLI capability.
+title: '[feat] '
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before proposing, skim [VISION.md](https://github.com/hybridtechie/soothsay/blob/main/VISION.md) — soothsay's core stays deterministic, sidecar-first, and zero-token-tax. Features that fit those principles land fastest.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What drift or lie does this catch?
+      description: Describe the real-world doc-vs-repo mismatch this would detect. Concrete examples from your repos are gold.
+      placeholder: 'My CLAUDE.md documents env vars that no longer exist in .env.example...'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of feature?
+      options:
+        - New Layer 0 check (zero-config extraction)
+        - New assert type (soothsay.yml sidecar)
+        - CLI / output / reporter change
+        - GitHub Action / CI integration
+        - AI advisory (Layer 3) improvement
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: What would the finding/command look like? Sketch the output or config you have in mind.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: determinism
+    attributes:
+      label: Can it be verified deterministically?
+      description: Blocking findings must be mechanically provable against repo facts. If this needs judgment, it belongs in the advisory layer.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Can existing asserts, config, or another tool (markdownlint, agnix, cclint) already do this?
+    validations:
+      required: false

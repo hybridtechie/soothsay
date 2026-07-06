@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1400" viewBox="0 0 1000 1400">
+  <!-- ===================== Canvas ===================== -->
+  <rect x="0" y="0" width="1000" height="1400" fill="#0B0E14"/>
+
+  <!-- ===================== Band 1: Header ===================== -->
+  <text x="40" y="118" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="bold" fill="#E8ECF4">soothsay</text>
+  <rect x="41" y="132" width="146" height="2" fill="#2DE0A7"/>
+  <text x="40" y="166" font-family="Georgia, 'Times New Roman', serif" font-size="14" font-style="italic" fill="#8A93A6">sooth (n., Old English): truth</text>
+  <text x="40" y="208" font-family="Georgia, 'Times New Roman', serif" font-size="22" fill="#E8ECF4">Your agent docs make claims. Soothsay <tspan font-style="italic" fill="#2DE0A7">proves</tspan> them.</text>
+  <rect x="40" y="240" width="920" height="2" fill="#2DE0A7" opacity="0.45"/>
+
+  <!-- ===================== Band 2: Stats chips ===================== -->
+  <g font-family="Arial, Helvetica, sans-serif">
+    <!-- Chip 1: SCALE -->
+    <rect x="40" y="278" width="293" height="56" rx="14" fill="#171C29" stroke="#2A3040" stroke-width="1"/>
+    <text x="186.5" y="297" text-anchor="middle" font-size="10" letter-spacing="2" fill="#2DE0A7">SCALE</text>
+    <text x="186.5" y="314" text-anchor="middle" font-size="12" fill="#E8ECF4">744k+ CLAUDE.md / AGENTS.md</text>
+    <text x="186.5" y="329" text-anchor="middle" font-size="12" fill="#E8ECF4">files on GitHub</text>
+    <!-- Chip 2: RISK -->
+    <rect x="353" y="278" width="293" height="56" rx="14" fill="#171C29" stroke="#2A3040" stroke-width="1"/>
+    <text x="499.5" y="297" text-anchor="middle" font-size="10" letter-spacing="2" fill="#2DE0A7">RISK</text>
+    <text x="499.5" y="314" text-anchor="middle" font-size="12" fill="#E8ECF4">1 in 4 orgs have agent-config gaps</text>
+    <text x="499.5" y="329" text-anchor="middle" font-size="12" fill="#E8ECF4">(Codacy, 34k repos)</text>
+    <!-- Chip 3: COST -->
+    <rect x="666" y="278" width="293" height="56" rx="14" fill="#171C29" stroke="#2A3040" stroke-width="1"/>
+    <text x="812.5" y="297" text-anchor="middle" font-size="10" letter-spacing="2" fill="#2DE0A7">COST</text>
+    <text x="812.5" y="314" text-anchor="middle" font-size="12" fill="#E8ECF4">Bad context files: &#8722;3% success,</text>
+    <text x="812.5" y="329" text-anchor="middle" font-size="12" fill="#E8ECF4">+20% cost (ETH Zurich)</text>
+  </g>
+
+  <!-- ===================== Band 3 LEFT: Terminal ===================== -->
+  <rect x="40" y="384" width="420" height="608" rx="10" fill="#0D1117" stroke="#2A3040" stroke-width="1"/>
+  <path d="M 40 412 v -18 a 10 10 0 0 1 10 -10 h 400 a 10 10 0 0 1 10 10 v 18 z" fill="#171C29"/>
+  <line x1="40" y1="412" x2="460" y2="412" stroke="#2A3040" stroke-width="1"/>
+  <circle cx="58" cy="398" r="6" fill="#FF5D5D"/>
+  <circle cx="76" cy="398" r="6" fill="#FFB454"/>
+  <circle cx="94" cy="398" r="6" fill="#2DE0A7"/>
+  <text x="250" y="402" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="11" fill="#8A93A6">soothsay check</text>
+
+  <g font-family="Menlo, Consolas, monospace" font-size="13" xml:space="preserve">
+    <text x="56" y="446"><tspan fill="#2DE0A7">$</tspan><tspan fill="#E8ECF4"> npx soothsay check</tspan></text>
+
+    <text x="56" y="500"><tspan fill="#FF5D5D">&#10007;</tspan><tspan fill="#E8ECF4"> L7  [package-manager] `npm install`</tspan></text>
+    <text x="103" y="526" fill="#E8ECF4">found but repo uses pnpm</text>
+
+    <text x="56" y="574"><tspan fill="#FF5D5D">&#10007;</tspan><tspan fill="#E8ECF4"> L9  [command-exists] scripts/deploy.sh</tspan></text>
+    <text x="103" y="600" fill="#E8ECF4">does not exist</text>
+
+    <text x="56" y="648"><tspan fill="#FFB454">&#9888;</tspan><tspan fill="#E8ECF4"> L5  [freshness] "Setup" not re-verified</tspan></text>
+    <text x="103" y="674" fill="#E8ECF4">since package.json changed</text>
+
+    <text x="56" y="722"><tspan fill="#FF5D5D">&#10007;</tspan><tspan fill="#E8ECF4"> L1  [tool-claim-mismatch] agent claims</tspan></text>
+    <text x="103" y="748" fill="#E8ECF4">read-only but has Edit</text>
+
+    <text x="56" y="806" font-weight="bold" fill="#FF5D5D">3 error(s), 1 warning(s) &#8212; FAIL</text>
+
+    <text x="56" y="856" fill="#2DE0A7">$</text>
+  </g>
+  <rect x="70" y="844" width="8" height="15" fill="#2DE0A7" opacity="0.85"/>
+
+  <!-- ===================== Band 3 RIGHT: Layer cards ===================== -->
+  <!-- Card 1: Layer 0 -->
+  <rect x="480" y="384" width="480" height="140" rx="10" fill="#11151F" stroke="#2A3040" stroke-width="1"/>
+  <rect x="480" y="394" width="4" height="120" rx="2" fill="#2DE0A7"/>
+  <text x="936" y="432" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="bold" fill="#2DE0A7" opacity="0.85">0</text>
+  <text x="508" y="424" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="bold" fill="#E8ECF4">Layer 0 &#8212; Extract &amp; Verify</text>
+  <text x="508" y="454" font-family="Arial, Helvetica, sans-serif" font-size="12.5" fill="#8A93A6">Zero config. Paths, links, commands, package</text>
+  <text x="508" y="474" font-family="Arial, Helvetica, sans-serif" font-size="12.5" fill="#8A93A6">manager, tool claims &#8212; checked against the repo.</text>
+
+  <!-- Card 2: Layer 1 -->
+  <rect x="480" y="540" width="480" height="140" rx="10" fill="#11151F" stroke="#2A3040" stroke-width="1"/>
+  <rect x="480" y="550" width="4" height="120" rx="2" fill="#8B7CFF"/>
+  <text x="936" y="588" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="bold" fill="#8B7CFF" opacity="0.85">1</text>
+  <text x="508" y="580" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="bold" fill="#E8ECF4">Layer 1 &#8212; Freshness</text>
+  <text x="508" y="610" font-family="Menlo, Consolas, monospace" font-size="12" fill="#8A93A6">&lt;!-- fresh: verified=DATE watch=globs --&gt;</text>
+  <text x="508" y="630" font-family="Arial, Helvetica, sans-serif" font-size="12.5" fill="#8A93A6">checked against git log. Re-stamp with</text>
+  <text x="508" y="650" font-family="Arial, Helvetica, sans-serif" font-size="12.5" fill="#8A93A6"><tspan font-family="Menlo, Consolas, monospace" font-size="12">soothsay bless</tspan>.</text>
+
+  <!-- Card 3: Layer 2 -->
+  <rect x="480" y="696" width="480" height="140" rx="10" fill="#11151F" stroke="#2A3040" stroke-width="1"/>
+  <rect x="480" y="706" width="4" height="120" rx="2" fill="#2DE0A7"/>
+  <text x="936" y="744" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="bold" fill="#2DE0A7" opacity="0.85">2</text>
+  <text x="508" y="736" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="bold" fill="#E8ECF4">Layer 2 &#8212; Sidecar Asserts</text>
+  <text x="508" y="766" font-family="Arial, Helvetica, sans-serif" font-size="12.5" fill="#8A93A6"><tspan font-family="Menlo, Consolas, monospace" font-size="12">soothsay.yml</tspan>, anchored to headings. Zero tokens</text>
+  <text x="508" y="786" font-family="Arial, Helvetica, sans-serif" font-size="12.5" fill="#8A93A6">added to agent context.</text>
+
+  <!-- Card 4: Layer 3 -->
+  <rect x="480" y="852" width="480" height="140" rx="10" fill="#11151F" stroke="#2A3040" stroke-width="1"/>
+  <rect x="480" y="862" width="4" height="120" rx="2" fill="#8B7CFF"/>
+  <text x="936" y="900" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="bold" fill="#8B7CFF" opacity="0.85">3</text>
+  <text x="508" y="892" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="bold" fill="#E8ECF4">Layer 3 &#8212; AI Advisory</text>
+  <text x="508" y="922" font-family="Arial, Helvetica, sans-serif" font-size="12.5" fill="#8A93A6">Opt-in, budgeted, cached. Never blocks CI.</text>
+
+  <!-- ===================== Band 4: Checks pills ===================== -->
+  <g font-family="Menlo, Consolas, monospace" font-size="11">
+    <rect x="72" y="1040" width="101" height="30" rx="14" fill="#171C29" stroke="#2A3040" stroke-width="1"/>
+    <text x="122.5" y="1059" text-anchor="middle" fill="#E8ECF4">path-exists</text>
+
+    <rect x="189" y="1040" width="94" height="30" rx="14" fill="#171C29" stroke="#2A3040" stroke-width="1"/>
+    <text x="236" y="1059" text-anchor="middle" fill="#E8ECF4">link-valid</text>
+
+    <rect x="299" y="1040" width="121" height="30" rx="14" fill="#171C29" stroke="#2A3040" stroke-width="1"/>
+    <text x="359.5" y="1059" text-anchor="middle" fill="#E8ECF4">command-exists</text>
+
+    <rect x="436" y="1040" width="127" height="30" rx="14" fill="#171C29" stroke="#2A3040" stroke-width="1"/>
+    <text x="499.5" y="1059" text-anchor="middle" fill="#E8ECF4">package-manager</text>
+
+    <rect x="579" y="1040" width="154" height="30" rx="14" fill="#171C29" stroke="#2A3040" stroke-width="1"/>
+    <text x="656" y="1059" text-anchor="middle" fill="#E8ECF4">tool-claim-mismatch</text>
+
+    <rect x="749" y="1040" width="88" height="30" rx="14" fill="#171C29" stroke="#2A3040" stroke-width="1"/>
+    <text x="793" y="1059" text-anchor="middle" fill="#E8ECF4">freshness</text>
+
+    <rect x="853" y="1040" width="75" height="30" rx="14" fill="#171C29" stroke="#2A3040" stroke-width="1"/>
+    <text x="890.5" y="1059" text-anchor="middle" fill="#E8ECF4">asserts</text>
+  </g>
+
+  <!-- ===================== Band 5: CTA footer ===================== -->
+  <rect x="40" y="1130" width="920" height="230" rx="10" fill="#11151F" stroke="#2A3040" stroke-width="1"/>
+  <rect x="395" y="1180" width="210" height="44" rx="10" fill="#0D1117" stroke="#2DE0A7" stroke-width="1.5"/>
+  <text x="500" y="1208" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="16" fill="#E8ECF4">npm i -D soothsay</text>
+  <text x="500" y="1274" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#E8ECF4">github.com/hybridtechie/soothsay</text>
+  <text x="500" y="1310" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#8A93A6">MIT licensed &#183; CI-first &#183; deterministic core</text>
+</svg>

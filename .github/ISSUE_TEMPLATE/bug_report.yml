@@ -1,0 +1,85 @@
+name: Bug report
+description: A check produced a wrong finding, missed a real problem, or the CLI misbehaved.
+title: '[bug] '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The doc snippet + expected/actual finding is what makes bugs reproducible — please fill those in.
+
+  - type: input
+    id: version
+    attributes:
+      label: Soothsay version
+      description: Output of `npx soothsay --help` header or your package.json entry.
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Node version, OS, package manager.
+      placeholder: Node 20.11, macOS 15, pnpm 9
+    validations:
+      required: true
+
+  - type: textarea
+    id: doc-snippet
+    attributes:
+      label: Doc snippet
+      description: The minimal piece of markdown (CLAUDE.md / SKILL.md / etc.) that triggers the behaviour. Include surrounding context if it matters (frontmatter, code fences).
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: repo-state
+    attributes:
+      label: Relevant repo state
+      description: What the repo actually looks like where it matters — files that exist, package.json scripts, packageManager field, soothsay.yml asserts.
+      placeholder: |
+        package.json has "packageManager": "pnpm@9.0.0"
+        scripts/deploy.sh exists
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected finding
+      description: What soothsay should have reported (or "no finding").
+      placeholder: 'No finding — the path exists.'
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual finding
+      description: What soothsay actually reported. Paste the exact output line(s), ideally from `soothsay check --json`.
+      render: text
+    validations:
+      required: true
+
+  - type: dropdown
+    id: false-positive
+    attributes:
+      label: Is this a false positive?
+      description: A false positive = soothsay flagged something that is actually true/fine. These are top priority — false positives are the death of lint tools.
+      options:
+        - 'Yes — soothsay flagged a claim that is actually true'
+        - 'No — soothsay missed a real problem (false negative)'
+        - 'Neither — CLI/crash/output bug'
+    validations:
+      required: true
+
+  - type: textarea
+    id: false-positive-detail
+    attributes:
+      label: False-positive detail
+      description: If you answered yes above — why is the flagged claim actually correct? This drives the heuristic fix.
+    validations:
+      required: false
