@@ -80,8 +80,11 @@ jobs:
           echo "Releasing $TAG (level: $LEVEL)"
 
       # prepublishOnly (test + build) runs during publish; the test job already gated it.
-      - name: Publish to npm (with provenance)
-        run: npm publish --provenance --access public
+      # NOTE: --provenance is intentionally omitted. This account/org rejects the
+      # attestation on publish (registry returns a 404 on the package PUT); the same
+      # token publishes fine without it. Re-enable via npm Trusted Publishing later.
+      - name: Publish to npm
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -98,8 +101,8 @@ jobs:
       - name: Scope package to the repo owner
         run: npm pkg set name="@hybridtechie/soothsay"
 
-      - name: Publish to GitHub Packages (with provenance)
-        run: npm publish --provenance
+      - name: Publish to GitHub Packages
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
