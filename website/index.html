@@ -484,7 +484,7 @@ html.anim .hud{display:block}
         <h1 class="wordmark" data-r>soothsay</h1>
         <p class="etym" data-r>A soothsayer is, literally, a <b>truth-teller</b>.</p>
         <p class="tagline" data-r>Your agent docs make claims.<br><em>Soothsay proves them.</em></p>
-        <p class="mono-chip" data-r><span class="prompt">$</span> npx soothsay check&nbsp;<span class="caret" aria-hidden="true"></span></p>
+        <p class="mono-chip" data-r><span class="prompt">$</span> npx @njtp/soothsay check&nbsp;<span class="caret" aria-hidden="true"></span></p>
         <p class="title-meta" data-r>
           <span>Open source</span><span>MIT</span><span>Node ≥ 20</span><span>Zero config</span>
         </p>
@@ -544,7 +544,7 @@ html.anim .hud{display:block}
           </div>
           <div class="term-body">
             <div class="term-fail">
-              <p class="tl tl-cmd" data-r><span class="prompt">$</span> npx soothsay check</p>
+              <p class="tl tl-cmd" data-r><span class="prompt">$</span> npx @njtp/soothsay check</p>
               <p class="tl tl-file" data-r>CLAUDE.md</p>
               <p class="tl tl-err" data-r>  <span class="sig">✗</span> L7  <span class="cid">[package-manager]</span> `npm install` found but this repo uses pnpm (declared in package.json#packageManager)</p>
               <p class="tl tl-fix" data-r>      → Use `pnpm install` instead</p>
@@ -557,7 +557,7 @@ html.anim .hud{display:block}
             </div>
             <!-- same repo, after fixes — crossfaded in over the failure output -->
             <div class="term-good" id="termGood">
-              <p class="tl tl-cmd"><span class="prompt">$</span> npx soothsay check</p>
+              <p class="tl tl-cmd"><span class="prompt">$</span> npx @njtp/soothsay check</p>
               <p class="tg-ok"><span class="sig">✓</span> no findings — your docs tell the truth</p>
               <p class="tg-sum">0 error(s), 0 warning(s), 0 info — <span class="verdict-pass">PASS</span> <span class="caret" aria-hidden="true"></span></p>
             </div>
@@ -577,7 +577,7 @@ html.anim .hud{display:block}
             <p class="layer-num">Layer 0</p>
             <h3>Extract &amp; verify</h3>
             <p>Zero config. Parses your agent docs, extracts every checkable claim — paths, links, commands, package manager, frontmatter, tool-permission claims — and verifies each against repo facts. Value on the first run.</p>
-            <p class="layer-cmd">npx soothsay check</p>
+            <p class="layer-cmd">npx @njtp/soothsay check</p>
           </div>
           <div class="layer" data-r>
             <p class="layer-num">Layer 1</p>
@@ -613,7 +613,7 @@ html.anim .hud{display:block}
             <p class="sub" data-r>Docs break when code changes — so the check belongs next to the tests, on every pull request.</p>
             <div class="snippet" data-r>
               <span class="cm"># .github/workflows/soothsay.yml</span><br>
-              <span class="key">- run:</span> <span class="str">npx soothsay check --github</span>
+              <span class="key">- run:</span> <span class="str">npx @njtp/soothsay check --github</span>
             </div>
             <p class="wolf" data-r><span class="tick">✓</span><span>Exit 1 only on <b>high-confidence errors</b>. <code>--github</code> puts findings inline on the PR diff; confidence tiering exists precisely so CI doesn't cry wolf.</span></p>
           </div>
@@ -655,13 +655,13 @@ html.anim .hud{display:block}
       <div class="wrap">
         <p class="kicker" data-r><span class="k-num">06</span> Get started</p>
         <h2 class="h" style="text-align:center"><span data-r>Make your docs</span> <em class="truthy" data-r>tell the truth.</em></h2>
-        <p class="install" data-r><span class="prompt">$</span> npm i -D <span class="pkg">soothsay</span></p>
+        <p class="install" data-r><span class="prompt">$</span> npm i -D <span class="pkg">@njtp/soothsay</span></p>
         <p class="install-note" data-r>then · npx soothsay check · zero config required</p>
         <div class="btn-row" data-r>
           <!-- soothsay-onepager.svg ships alongside this file -->
           <a class="btn btn-primary" href="soothsay-onepager.svg" download="soothsay-onepager.svg">Download the one-pager (SVG)</a>
           <a class="btn btn-ghost" href="https://github.com/hybridtechie/soothsay">GitHub <span class="m">→</span></a>
-          <a class="btn btn-ghost" href="https://www.npmjs.com/package/soothsay">npm <span class="m">↗</span></a>
+          <a class="btn btn-ghost" href="https://www.npmjs.com/package/@njtp/soothsay">npm <span class="m">↗</span></a>
         </div>
         <div class="start-foot" data-r>
           <p class="meta"><span>MIT license</span><span>Built with tests first</span><span>Deterministic core</span></p>
