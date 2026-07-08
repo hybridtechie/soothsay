@@ -44,15 +44,14 @@ jobs:
         with:
           fetch-depth: 0 # full history so the bump commit sits on top of main
 
-      # Node >= 22.14 and npm >= 11.5.1 are required for OIDC trusted publishing.
+      # OIDC trusted publishing needs npm >= 11.5.1. Node 24 bundles a complete
+      # npm 11 (with sigstore for provenance); self-upgrading npm 10 -> 11 leaves
+      # the tree missing sigstore, so we rely on the bundled npm instead.
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
           cache: npm
           registry-url: 'https://registry.npmjs.org'
-
-      # Node 22 ships npm 10; trusted publishing needs npm >= 11.5.1.
-      - run: npm install -g npm@latest
 
       - run: npm ci
 
