@@ -23,7 +23,7 @@ runs:
         SOOTHSAY_STRICT: ${{ inputs.strict }}
       run: |
         if [ "$SOOTHSAY_STRICT" = "true" ]; then
-          npx --yes soothsay check "$SOOTHSAY_PATH" --github --strict
+          npx --yes @njtp/soothsay check "$SOOTHSAY_PATH" --github --strict
         else
-          npx --yes soothsay check "$SOOTHSAY_PATH" --github
+          npx --yes @njtp/soothsay check "$SOOTHSAY_PATH" --github
         fi

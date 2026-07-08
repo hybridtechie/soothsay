@@ -156,4 +156,40 @@ describe('runAiAdvisor', () => {
     const result = await runAiAdvisor(makeCtx(root), { apiKey: undefined });
     expect(result.findings[0]!.message).toMatch(/ANTHROPIC_API_KEY/);
   });
+
+  it('returns an info finding (never throws) when the model declines the request', async () => {
+    const fake: AdvisorFetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ content: [], stop_reason: 'refusal' }),
+    });
+    const result = await runAiAdvisor(makeCtx(root), { apiKey: 'k', fetchFn: fake });
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.severity).toBe('info');
+    expect(result.findings[0]!.message).toMatch(/declined/i);
+  });
+
+  it('returns an info finding when the model output is not valid JSON', async () => {
+    const fake: AdvisorFetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        content: [{ type: 'text', text: 'not json at all' }],
+        stop_reason: 'end_turn',
+      }),
+    });
+    const result = await runAiAdvisor(makeCtx(root), { apiKey: 'k', fetchFn: fake });
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]!.severity).toBe('info');
+    expect(result.findings[0]!.message).toMatch(/unparseable/i);
+  });
+
+  it('maps a contradiction to warning and other kinds to info severity', async () => {
+    const fake: AdvisorFetch = async () => ({ ok: true, status: 200, json: async () => API_RESPONSE });
+    const result = await runAiAdvisor(makeCtx(root), { apiKey: 'k', fetchFn: fake });
+    const contradiction = result.findings.find((f) => f.message.includes('[contradiction]'))!;
+    const vague = result.findings.find((f) => f.message.includes('[vague]'))!;
+    expect(contradiction.severity).toBe('warning');
+    expect(vague.severity).toBe('info');
+  });
 });

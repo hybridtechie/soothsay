@@ -23,7 +23,7 @@ Soothsay inverts this:
 
 ## The four layers
 
-1. **Layer 0 — Extract & verify (zero config).** Commands, paths, links, lockfile/package-manager consistency, skill resources, frontmatter, tool-permission-vs-prose claims — all pulled from existing markdown and checked against repo facts. Value on the first `npx soothsay check`, on any repo, with no setup. This is the adoption wedge.
+1. **Layer 0 — Extract & verify (zero config).** Commands, paths, links, lockfile/package-manager consistency, skill resources, frontmatter, tool-permission-vs-prose claims — all pulled from existing markdown and checked against repo facts. Value on the first `npx @njtp/soothsay check`, on any repo, with no setup. This is the adoption wedge.
 
 2. **Layer 1 — Freshness (one-line directives).** The single fact extraction can't infer is which code paths invalidate which doc sections. `<!-- fresh: verified=DATE watch=globs -->` plus `git log` answers it deterministically. `soothsay bless` re-stamps after human review.
 

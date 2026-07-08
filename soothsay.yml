@@ -1,0 +1,18 @@
+# soothsay configuration — https://github.com/hybridtechie/soothsay
+#
+# This repo dogfoods soothsay in CI (`soothsay check .`). README.md is the
+# tool's own marketing/usage doc: it is full of *illustrative* examples —
+# fake paths (`scripts/x.py`, `FORMS.md`, `Scripts/Sync.py`), placeholder
+# directives (`<!-- fresh: verified=… -->`), and generic filenames
+# (`CLAUDE.md`, `AGENTS.md`, `SKILL.md`) used to demonstrate what soothsay
+# catches. Those trip `path-exists` (all low-confidence, non-blocking info),
+# which is noise rather than drift.
+#
+# soothsay's config is file-level: `ignore` drops a whole file from doc
+# selection, `disable` turns a check off globally. There is no block-level
+# ignore, so scoping `path-exists` to "the README's example blocks only" is
+# not expressible. Ignoring README.md is the narrowest available mechanism
+# (see the fix-vs-ignore guide in skills/soothsay/SKILL.md). Real docs —
+# SKILL.md, agent definitions, VISION.md — are still fully checked.
+ignore:
+  - README.md

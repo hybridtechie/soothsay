@@ -11,12 +11,12 @@ Soothsay extracts checkable claims from agent instruction files and verifies the
 
 | Situation | Command |
 |---|---|
-| Audit the project's agent docs | `npx --yes soothsay check` (add `--json` when you need to parse results, `--strict` to fail on warnings) |
-| CI or PR annotations | `npx --yes soothsay check --github` |
-| Findings are mechanical (wrong casing, wrong package manager) | `npx --yes soothsay check --fix` — applies only provably-safe rewrites, then re-checks |
-| A section was re-verified by a human and its freshness warning should clear | `npx --yes soothsay bless <file>` (optionally `--section <slug>`) |
-| The project needs a sidecar config (ignores, disabled checks, assertions) | `npx --yes soothsay init` — detects the repo's sources of truth (package manager, agent tool grants, documented scripts) and scaffolds verified asserts; edit soothsay.yml to taste |
-| A finding's check id is unclear | `npx --yes soothsay explain <check-id>` |
+| Audit the project's agent docs | `npx --yes @njtp/soothsay check` (add `--json` when you need to parse results, `--strict` to fail on warnings) |
+| CI or PR annotations | `npx --yes @njtp/soothsay check --github` |
+| Findings are mechanical (wrong casing, wrong package manager) | `npx --yes @njtp/soothsay check --fix` — applies only provably-safe rewrites, then re-checks |
+| A section was re-verified by a human and its freshness warning should clear | `npx --yes @njtp/soothsay bless <file>` (optionally `--section <slug>`) |
+| The project needs a sidecar config (ignores, disabled checks, assertions) | `npx --yes @njtp/soothsay init` — detects the repo's sources of truth (package manager, agent tool grants, documented scripts) and scaffolds verified asserts; edit soothsay.yml to taste |
+| A finding's check id is unclear | `npx --yes @njtp/soothsay explain <check-id>` |
 
 Run from the project root. Exit code 1 means at least one high-confidence error (with `--strict`, warnings too).
 
@@ -52,14 +52,14 @@ Rules of thumb:
 
 Freshness directives bind a doc section to the code that can invalidate it:
 
-1. Add a one-line HTML comment under a heading, for example: `<!-- fresh: verified=2026-07-04 watch=package.json,src/auth/** -->`. Choose watch globs that cover the code the section describes.
+1. Add a one-line HTML comment under a heading, for example: `<!-- fresh: verified=2026-07-08 watch=package.json,src/auth/** -->`. Choose watch globs that cover the code the section describes.
 2. Soothsay warns when any watched path has commits after the verified date.
 3. When that warning fires, **a human re-reads the section against the current code**. Fix anything stale.
 4. Only after review, re-stamp:
 
 ```bash
-npx --yes soothsay bless <file>
-npx --yes soothsay bless <file> --section <slug>
+npx --yes @njtp/soothsay bless <file>
+npx --yes @njtp/soothsay bless <file> --section <slug>
 ```
 
 Never bless without reviewing — blessing asserts "a human verified this today". Backdating with `--date` is for recording a review that already happened, not for silencing warnings.

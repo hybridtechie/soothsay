@@ -247,6 +247,38 @@ describe('commandExists', () => {
     expect(await commandExists.run(makeCtx([doc]))).toEqual([]);
   });
 
+  it('reports nothing when the run script name is not a plausible token', async () => {
+    // `run` with a non-script-shaped first argument: parseRunScript bails
+    // rather than blaming a script that was never named.
+    const doc = parseMarkdown('CLAUDE.md', "```bash\nnpm run 'my task'\n```\n");
+    expect(await commandExists.run(makeCtx([doc]))).toEqual([]);
+  });
+
+  it('does not treat `yarn start` as a missing lifecycle script', async () => {
+    // yarn resolves `yarn start` to `yarn run start`; the lifecycle rule
+    // deliberately excludes it so a documented `yarn start` never false-fails.
+    const doc = parseMarkdown('CLAUDE.md', '```bash\nyarn start\n```\n');
+    const findings = await commandExists.run(
+      makeCtx([doc], {
+        packageJson: { name: 'x', scripts: { build: 'tsc' } },
+        packageScripts: new Set(['build']),
+      }),
+    );
+    expect(findings).toEqual([]);
+  });
+
+  it('still flags `npm start` when there is no start script', async () => {
+    const doc = parseMarkdown('CLAUDE.md', '```bash\nnpm start\n```\n');
+    const findings = await commandExists.run(
+      makeCtx([doc], {
+        packageJson: { name: 'x', scripts: { build: 'tsc' } },
+        packageScripts: new Set(['build']),
+      }),
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain('"start"');
+  });
+
   it('validates a script split across a backslash continuation', async () => {
     const doc = parseMarkdown('CLAUDE.md', '```bash\npnpm run \\\n  deploy\n```\n');
     const findings = await commandExists.run(makeCtx([doc]));
@@ -378,6 +410,50 @@ describe('frontmatterValid', () => {
     expect(errors[0]!.message).toContain('description');
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.confidence).toBe('medium');
+  });
+
+  it('errors when an agent file has no frontmatter at all', async () => {
+    const doc = parseMarkdown('.claude/agents/helper.md', '# Helper\n\nNo frontmatter here.\n');
+    const findings = await frontmatterValid.run(makeCtx([doc]));
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe('error');
+    expect(findings[0]!.confidence).toBe('high');
+    expect(findings[0]!.message).toContain('agent file has no frontmatter');
+  });
+
+  it('warns when a skill description exceeds the 1024-char maximum', async () => {
+    const long = 'x'.repeat(1025);
+    const doc = parseMarkdown(
+      '.claude/skills/foo/SKILL.md',
+      `---\nname: foo\ndescription: ${long}\n---\n\n# Foo\n`,
+    );
+    const findings = await frontmatterValid.run(makeCtx([doc]));
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe('warning');
+    expect(findings[0]!.confidence).toBe('medium');
+    expect(findings[0]!.message).toContain('1025 chars');
+  });
+
+  it('is silent for a fully valid SKILL.md and a fully valid agent file', async () => {
+    const skill = parseMarkdown(
+      '.claude/skills/foo/SKILL.md',
+      '---\nname: foo\ndescription: Does a thing.\n---\n\n# Foo\n',
+    );
+    const agent = parseMarkdown(
+      '.claude/agents/helper.md',
+      '---\nname: helper\ndescription: Helps out.\ntools: [Read, Grep]\n---\n\nBody.\n',
+    );
+    const findings = await frontmatterValid.run(makeCtx([skill, agent]));
+    expect(findings).toEqual([]);
+  });
+
+  it('accepts a string-valued tools key on an agent file', async () => {
+    const doc = parseMarkdown(
+      '.claude/agents/helper.md',
+      '---\nname: helper\ndescription: Helps out.\ntools: "Read, Grep, Bash"\n---\n\nBody.\n',
+    );
+    const findings = await frontmatterValid.run(makeCtx([doc]));
+    expect(findings).toEqual([]);
   });
 
   it('errors when an agent file has a non-string, non-string-array tools key', async () => {

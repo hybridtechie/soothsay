@@ -12,7 +12,7 @@ body:
     id: version
     attributes:
       label: Soothsay version
-      description: Output of `npx soothsay --help` header or your package.json entry.
+      description: Output of `npx @njtp/soothsay --help` header or your package.json entry.
       placeholder: 0.1.0
     validations:
       required: true

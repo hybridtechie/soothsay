@@ -118,6 +118,31 @@ ANTHROPIC_API_KEY=... soothsay check --ai [--ai-budget 150000] [--ai-model claud
 
 Finds what only a model can: cross-file prose contradictions, vague instructions, untyped claims worth turning into asserts. Cost-controlled by design: content-hash cached (unchanged docs are never re-billed), token-budgeted (refuses to run past the ceiling), Haiku-class model by default, and **findings are advisory only** — they never fail the build.
 
+## What soothsay catches — and how it fixes it
+
+Every finding carries a **check id**, a **severity** (`✗ error` / `⚠ warning` / `info`), and a **confidence** tier. Only high-confidence errors fail CI by default (see [CI](#ci)). Run `soothsay explain <check-id>` for any finding to see what it means and how to resolve it.
+
+| Check | What it flags | Highest severity | How it's fixed |
+|---|---|---|---|
+| `path-exists` | A file path in a doc that doesn't exist — including **case-only mismatches** (`Scripts/Sync.py` vs `scripts/sync.py`). Missing paths under a known top-level dir warn; unrecognized tokens are info-only. | ✗ error (case mismatch) | **`--fix` autofix** rewrites the casing. Genuinely-missing paths → manual (fix the doc or restore the file). |
+| `link-valid` | Broken internal links, dead same-file and cross-file heading anchors, broken reference-style links, case-mismatched link targets. | ✗ error | **`--fix` autofix** for casing. Broken targets/anchors → manual, with a "did you mean" suggestion where one exists. |
+| `skill-resource-exists` | A `SKILL.md` referencing a script/asset missing from its skill directory. A resource that lives at the repo root instead, or a runtime output dir (`tasks/`), is downgraded to info. | ✗ error | Manual — add the resource, or reference it by its real (repo-root-relative) path per the suggestion. |
+| `command-exists` | `pnpm run build` with no `build` script; a bare `pnpm` subcommand that's neither a builtin nor a script (warns); a file passed to an interpreter (`scripts/x.py`) that doesn't exist. Inline commands are medium-confidence; fenced ones high. | ✗ error | **`--fix` autofix** for path casing. Missing scripts/files → manual (add the script or fix the path). |
+| `package-manager` | A dependency-mutating command for the wrong manager — `npm install` in a pnpm repo. Global installs warn; negative examples ("never run `npm install`") drop to info. | ✗ error | **`--fix` autofix** translates intent-preserving cases (`npm ci → pnpm install --frozen-lockfile`, `npm i -D vitest → pnpm add vitest -D`). Ambiguous cases → manual. |
+| `frontmatter-valid` | A `SKILL.md` / agent file missing required `name` or `description`, a malformed `name`, an over-long `description` (>1024), or a `tools` key that isn't a string/string-array. | ✗ error | Manual — add or correct the frontmatter field. |
+| `tool-claim-mismatch` | An agent whose prose says it's **read-only** while its frontmatter grants `Write`/`Edit`/`MultiEdit`/`NotebookEdit`/`Bash` — or declares no `tools` restriction at all (inherits everything). | ✗ error | Manual — remove the write tool, or drop the read-only claim (the suggestion says which). |
+| `freshness` | A `fresh:` directive (see [Layer 1](#layer-1--freshness-tracking)) whose watched paths have commits after its verified date — the section is stale. Malformed directives are errors. | ⚠ warning | Re-verify, then **`soothsay bless <file>`** re-stamps the directive. |
+| `asserts` | A sidecar rule in `soothsay.yml` that failed — a forbidden command in docs, a missing required file/command, a forbidden import, or a source-of-truth value that diverged. | ✗ error | Manual — fix the doc/code the assert protects, or adjust the assert. |
+| `assert-anchor` | An assert anchored (`doc:`) to a heading or file that no longer exists — how sidecar drift is caught. | ✗ error | Manual — re-point the assert or restore the heading (near-miss slugs are suggested). |
+| `assert-conflicts` | Two asserts that can never both hold: duplicate ids, forbid-vs-require of the same command in overlapping scope, or competing sources of truth. | ✗ error | Manual — narrow a scope, add an `except`, or remove the duplicate. |
+| `ai-advisory` (opt-in `--ai`) | Prose contradictions across docs, vague instructions, and untyped claims worth pinning as asserts. | ⚠ warning | Advisory only — **never fails CI**; act on the suggestion at your discretion. |
+
+**Three fix paths, by design:**
+
+- **`soothsay check --fix`** applies only the rewrites soothsay is *certain* about — path/link casing and intent-preserving package-manager translations — then re-checks from disk. Everything ambiguous is left untouched and stays a finding. (See [Autofix](#autofix).)
+- **`soothsay bless <file>`** resolves `freshness` findings by re-stamping the verified date after you've re-checked a section.
+- **Everything else is manual**, but never blind: each finding names the exact `file:line` and, where a safe one exists, a `suggestion:` telling you what to change.
+
 ## CI
 
 ```yaml
@@ -157,7 +182,7 @@ The repo doubles as an installable Claude Code plugin. In Claude Code:
 /plugin install soothsay
 ```
 
-This adds a `/soothsay:check` slash command that runs `npx --yes soothsay check --json` in your project root, summarizes errors and warnings grouped by file, and helps you triage each finding — fixing genuine doc drift, or configuring ignores in soothsay.yml for false positives (never blindly editing vendored docs). A bundled skill also teaches Claude the check ids, the fix-vs-ignore decision guide, and the freshness/bless workflow, so plain requests like "is my CLAUDE.md stale?" work too.
+This adds a `/soothsay:check` slash command that runs `npx --yes @njtp/soothsay check --json` in your project root, summarizes errors and warnings grouped by file, and helps you triage each finding — fixing genuine doc drift, or configuring ignores in soothsay.yml for false positives (never blindly editing vendored docs). A bundled skill also teaches Claude the check ids, the fix-vs-ignore decision guide, and the freshness/bless workflow, so plain requests like "is my CLAUDE.md stale?" work too.
 
 ## Programmatic API
 
