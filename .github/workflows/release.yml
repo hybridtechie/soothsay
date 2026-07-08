@@ -44,11 +44,15 @@ jobs:
         with:
           fetch-depth: 0 # full history so the bump commit sits on top of main
 
+      # Node >= 22.14 and npm >= 11.5.1 are required for OIDC trusted publishing.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
           cache: npm
           registry-url: 'https://registry.npmjs.org'
+
+      # Node 22 ships npm 10; trusted publishing needs npm >= 11.5.1.
+      - run: npm install -g npm@latest
 
       - run: npm ci
 
@@ -80,13 +84,12 @@ jobs:
           echo "Releasing $TAG (level: $LEVEL)"
 
       # prepublishOnly (test + build) runs during publish; the test job already gated it.
-      # NOTE: --provenance is intentionally omitted. This account/org rejects the
-      # attestation on publish (registry returns a 404 on the package PUT); the same
-      # token publishes fine without it. Re-enable via npm Trusted Publishing later.
+      # Auth is OIDC trusted publishing (permissions.id-token: write) — no NPM_TOKEN.
+      # npm >= 11.5.1 attaches provenance automatically; the --provenance flag is not needed.
+      # Requires a Trusted Publisher configured on npmjs.com for this package:
+      #   Owner: hybridtechie · Repository: soothsay · Workflow: release.yml
       - name: Publish to npm
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Push version bump and tag
         run: git push --follow-tags origin HEAD:main
