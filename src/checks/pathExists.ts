@@ -27,7 +27,8 @@ export interface PathCandidate {
  * (`youtube.com/watch`).
  */
 export function isNoiseToken(t: string): boolean {
-  if (t.includes('<') || t.includes('>')) return true; // template placeholder
+  if (t.includes('<') || t.includes('>') || t.includes('{') || t.includes('}'))
+    return true; // template placeholder / runtime interpolation
   if (t.includes('@')) return true; // email / handle
   if (t.startsWith('#')) return true; // anchor / spreadsheet error
   if (t.startsWith('~')) return true; // home-relative
@@ -42,8 +43,15 @@ export function isNoiseToken(t: string): boolean {
  * Clean a raw token and decide whether it looks like a repo file path.
  * Returns the normalized candidate, or null if the token is a URL, glob,
  * flag, command, placeholder, or points outside the repo.
+ *
+ * A slashed token only qualifies when it carries a real path signal: a file
+ * extension, an explicit `./`/`../` prefix, or a first segment that is an
+ * actual top-level repo directory (`topDirs`). This drops namespaced tokens
+ * that merely contain a slash — MCP tool ids (`microsoft/azure-devops-mcp`),
+ * ARM resource types (`Microsoft.Web/sites`), BDD keywords (`Given/When/Then`),
+ * branch names (`feature/x`), and JSON field paths — none of which are files.
  */
-export function candidatePathFrom(raw: string): string | null {
+export function candidatePathFrom(raw: string, topDirs: Set<string>): string | null {
   let t = raw.trim();
   // Strip surrounding quotes.
   while (
@@ -60,8 +68,12 @@ export function candidatePathFrom(raw: string): string | null {
   if (/[*?{[]/.test(t)) return null; // glob chars
   if (t.startsWith('-')) return null; // command flag
   if (isNoiseToken(t)) return null; // placeholders, handles, domains, ...
-  const hasSlash = t.includes('/');
-  if (!hasSlash && !PATH_EXT_RE.test(t)) return null;
+  const looksLikePath =
+    PATH_EXT_RE.test(t) ||
+    t.startsWith('./') ||
+    t.startsWith('../') ||
+    (t.includes('/') && topDirs.has(t.split('/')[0]!));
+  if (!looksLikePath) return null;
   if (t.startsWith('./')) t = t.slice(2);
   if (t.startsWith('/')) return null; // absolute — not repo-relative
   if (t === '..' || t.startsWith('../') || t.includes('/../')) return null; // outside repo
@@ -69,13 +81,27 @@ export function candidatePathFrom(raw: string): string | null {
 }
 
 /** All path-like candidates from a doc's inline code spans. */
-export function candidatePathsFrom(doc: DocFile): PathCandidate[] {
+export function candidatePathsFrom(doc: DocFile, topDirs: Set<string>): PathCandidate[] {
   const out: PathCandidate[] = [];
   for (const ic of doc.inlineCodes) {
-    const p = candidatePathFrom(ic.code);
+    const p = candidatePathFrom(ic.code, topDirs);
     if (p) out.push({ path: p, line: ic.line });
   }
   return out;
+}
+
+/** Top-level repo directory names, drawn from repo files and dirs. */
+export function topDirsOf(repo: RepoFacts): Set<string> {
+  const topDirs = new Set<string>();
+  for (const f of repo.files) {
+    const i = f.indexOf('/');
+    if (i > 0) topDirs.add(f.slice(0, i));
+  }
+  for (const d of repo.dirs) {
+    const i = d.indexOf('/');
+    topDirs.add(i > 0 ? d.slice(0, i) : d);
+  }
+  return topDirs;
 }
 
 /**
@@ -110,22 +136,14 @@ export const pathExists: Check = {
     const { repo } = ctx;
     const findings: Finding[] = [];
 
-    const topDirs = new Set<string>();
-    for (const f of repo.files) {
-      const i = f.indexOf('/');
-      if (i > 0) topDirs.add(f.slice(0, i));
-    }
-    for (const d of repo.dirs) {
-      const i = d.indexOf('/');
-      topDirs.add(i > 0 ? d.slice(0, i) : d);
-    }
+    const topDirs = topDirsOf(repo);
 
     // Findings for genuinely-missing paths are deferred so gitignored
     // candidates can be dropped in one batch.
     const pending: { finding: Finding; keys: string[] }[] = [];
 
     for (const doc of ctx.docs) {
-      for (const cand of candidatePathsFrom(doc)) {
+      for (const cand of candidatePathsFrom(doc, topDirs)) {
         const target = cand.path.replace(/\/+$/, '');
         if (target.length === 0) continue;
 

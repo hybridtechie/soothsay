@@ -97,6 +97,29 @@ describe('soothsay CLI', () => {
     expect(r.stdout).toMatch(/^::(error|warning|notice) file=/m);
   });
 
+  it('check --html writes a self-contained report and keeps the exit code', () => {
+    const root = mkdtempSync(join(tmpdir(), 'soothsay-cli-html-'));
+    writeFileSync(
+      join(root, 'CLAUDE.md'),
+      '# Rules\n\nSee [gone](docs/gone.md).\n',
+    );
+    const r = cli(['check', '.', '--html'], root);
+    expect(r.code).toBe(1); // still fails on the broken link
+    const report = join(root, 'soothsay-report.html');
+    expect(existsSync(report)).toBe(true);
+    const html = readFileSync(report, 'utf8');
+    expect(html).toMatch(/^<!doctype html>/i);
+    expect(html).toContain('docs/gone.md');
+    expect(r.stdout).toContain('soothsay-report.html');
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('check --html-file redirects the report to a custom path', () => {
+    const r = cli(['check', '.', '--html-file', 'out/report.html'], driftedRepo);
+    expect(existsSync(join(driftedRepo, 'out', 'report.html'))).toBe(true);
+    rmSync(join(driftedRepo, 'out'), { recursive: true, force: true });
+  });
+
   it('init scaffolds soothsay.yml then refuses to overwrite', () => {
     const root = mkdtempSync(join(tmpdir(), 'soothsay-cli-init-'));
     const first = cli(['init', '.'], root);

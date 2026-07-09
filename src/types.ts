@@ -86,6 +86,8 @@ export interface DocFile {
   text: string;
   lines: string[];
   frontmatter: Record<string, unknown> | null;
+  /** Set when frontmatter fences were present but YAML parsing threw. */
+  frontmatterError?: string;
   headings: Heading[];
   codeBlocks: CodeBlock[];
   inlineCodes: InlineCode[];

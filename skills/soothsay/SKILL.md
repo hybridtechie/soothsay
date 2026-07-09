@@ -27,9 +27,9 @@ Run from the project root. Exit code 1 means at least one high-confidence error 
 - **link-valid** — a markdown link targets a missing file or a dead heading anchor. Update the link or the heading.
 - **command-exists** — a documented command points at a nonexistent package.json script or script file. Update the doc or add the script.
 - **package-manager** — the doc instructs a different package manager than the repo declares (packageManager field or lockfile). Rewrite the command for the declared manager.
-- **frontmatter-valid** — a skill or agent file is missing required frontmatter (name, description) or has a malformed tools list.
+- **frontmatter-valid** — a skill or agent file is missing required frontmatter (name, description) or has a malformed tools list. A "failed to parse" message means the frontmatter is present but the YAML is broken — usually an unquoted value containing a colon-space; quote it.
 - **tool-claim-mismatch** — an agent's prose says read-only but its frontmatter grants write-capable tools. Fix whichever side is wrong: the prose or the tools.
-- **skill-resource-exists** — a skill file references a script or asset that is not in its skill directory. Restore the resource or fix the reference.
+- **skill-resource-exists** — a skill file references a script or asset that is not in its skill directory. Restore the resource or fix the reference. Runtime-generated paths and deployment/install paths (basename found elsewhere) are reported as info, not errors.
 - **freshness** — commits touched watched paths after the section's verified date. Needs human re-verification, then bless (see below).
 - **asserts** — a sidecar assertion in soothsay.yml failed (forbidden command present, required file missing, source-of-truth value diverged).
 - **assert-anchor** — an assertion points at a doc heading that no longer exists. Re-point the assert or restore the heading.

@@ -125,6 +125,35 @@ describe('pathExists', () => {
     const findings = await pathExists.run(ctxOf([doc], ['scripts/sync.py']));
     expect(findings).toEqual([]);
   });
+
+  it('does not treat namespaced slash tokens as file paths (no path signal)', async () => {
+    const doc = parseMarkdown(
+      'skill/SKILL.md',
+      [
+        'Uses `Microsoft.Web/sites` and `Given/When/Then` and `feature/customer-cleanup`.',
+        'Also `microsoft/azure-devops-mcp` and `M/O` and `clientDetails/businessDetails/abn`.',
+      ].join('\n'),
+    );
+    const findings = await pathExists.run(ctxOf([doc], ['scripts/sync.py']));
+    expect(findings).toEqual([]);
+  });
+
+  it('still flags a missing path under a real top-level directory', async () => {
+    const doc = parseMarkdown('CLAUDE.md', 'See `src/newfile.ts` and `docs/gone.md`.\n');
+    const findings = await pathExists.run(ctxOf([doc], ['src/index.ts', 'docs/setup.md']));
+    const src = findings.find((f) => f.message.includes('src/newfile.ts'));
+    const docs = findings.find((f) => f.message.includes('docs/gone.md'));
+    expect(src?.severity).toBe('warning');
+    expect(docs?.severity).toBe('warning');
+  });
+
+  it('still flags a bare extension token with a case mismatch', async () => {
+    const doc = parseMarkdown('CLAUDE.md', 'See `readme.md`.\n');
+    const findings = await pathExists.run(ctxOf([doc], ['README.md']));
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe('error');
+    expect(findings[0]!.confidence).toBe('high');
+  });
 });
 
 describe('linkValid', () => {
@@ -252,6 +281,60 @@ describe('linkValid', () => {
     expect(findings).toHaveLength(1);
     expect(findings[0]!.message).toContain('totally-absent');
   });
+
+  it('skips template-placeholder hrefs (runtime interpolation)', async () => {
+    const doc = parseMarkdown(
+      'skill/SKILL.md',
+      'See [c]({ComponentName}) and [i]({imageUrl}) and [e]({createEraserFileUrl}).\n',
+    );
+    const findings = await linkValid.run(ctxOf([doc], ['skill/SKILL.md']));
+    expect(findings).toEqual([]);
+  });
+
+  // --- C6: sibling-asset links under a flattened install layout ------------
+
+  it('downgrades a sibling-asset link that resolves under a flattened install layout to info/low', async () => {
+    const doc = parseMarkdown(
+      '.claude/skills/foo/SKILL.md',
+      'See [dm](../decision-making-skill/SKILL.md).\n',
+    );
+    const files = [
+      '.claude/skills/foo/SKILL.md',
+      'plugins/x/skills/decision-making-skill/SKILL.md',
+    ];
+    const findings = await linkValid.run(ctxOf([doc], files));
+    expect(findings).toHaveLength(1);
+    const f = findings[0]!;
+    expect(f.severity).toBe('info');
+    expect(f.confidence).toBe('low');
+    expect(f.message).toContain('decision-making-skill/SKILL.md');
+  });
+
+  it('still flags a sibling-asset link with no matching file as a broken-link error', async () => {
+    const doc = parseMarkdown(
+      '.claude/skills/foo/SKILL.md',
+      'See [dm](../decision-making-skill/SKILL.md).\n',
+    );
+    const findings = await linkValid.run(ctxOf([doc], ['.claude/skills/foo/SKILL.md']));
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe('error');
+    expect(findings[0]!.message).toContain('target not found');
+  });
+
+  it('keeps the broken-link error when a sibling asset matches ambiguously', async () => {
+    const doc = parseMarkdown(
+      '.claude/skills/foo/SKILL.md',
+      'See [dm](../decision-making-skill/SKILL.md).\n',
+    );
+    const files = [
+      '.claude/skills/foo/SKILL.md',
+      'plugins/a/skills/decision-making-skill/SKILL.md',
+      'plugins/b/skills/decision-making-skill/SKILL.md',
+    ];
+    const findings = await linkValid.run(ctxOf([doc], files));
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe('error');
+  });
 });
 
 describe('skillResources', () => {
@@ -363,6 +446,88 @@ describe('skillResources', () => {
     expect(f.message).toContain('gone.py');
     expect(f.location).toEqual({ file: '.claude/skills/foo/SKILL.md', line: 7 });
   });
+
+  it('ignores namespaced slash tokens in a SKILL.md', async () => {
+    const doc = parseMarkdown(
+      '.claude/skills/foo/SKILL.md',
+      'Uses `Microsoft.Web/sites`, `ado/wit_add_comment`, `Given/When/Then`, `feature/x`.\n',
+    );
+    const findings = await skillResources.run(
+      ctxOf([doc], ['.claude/skills/foo/SKILL.md']),
+    );
+    expect(findings).toEqual([]);
+  });
+
+  it('downgrades a runtime artifact whose top dir is not a repo dir to info/low', async () => {
+    const doc = parseMarkdown(
+      '.claude/skills/foo/SKILL.md',
+      'Writes `project-delivery/review-queue.md` and `.azure/deployment-plan.md`.\n',
+    );
+    const findings = await skillResources.run(
+      ctxOf([doc], ['.claude/skills/foo/SKILL.md']),
+    );
+    expect(findings.length).toBeGreaterThan(0);
+    for (const f of findings) {
+      expect(f.severity).toBe('info');
+      expect(f.confidence).toBe('low');
+    }
+  });
+
+  it('still errors on a missing resource whose top segment is a real repo dir', async () => {
+    const doc = parseMarkdown('.claude/skills/foo/SKILL.md', 'Run `test/gone.py`.\n');
+    const findings = await skillResources.run(
+      ctxOf([doc], ['.claude/skills/foo/SKILL.md', 'test/existing.py']),
+    );
+    expect(findings).toHaveLength(1);
+    const f = findings[0]!;
+    expect(f.severity).toBe('error');
+    expect(f.confidence).toBe('high');
+    expect(f.message).toContain('test/gone.py');
+  });
+
+  // --- C3: track `cd` inside code blocks -----------------------------------
+
+  it('resolves a code-block resource through a preceding `cd`', async () => {
+    const doc = parseMarkdown(
+      '.claude/skills/foo/SKILL.md',
+      '# Foo\n\n```bash\ncd helpers && python3 run.py\n```\n',
+    );
+    const files = ['.claude/skills/foo/SKILL.md', '.claude/skills/foo/helpers/run.py'];
+    const findings = await skillResources.run(ctxOf([doc], files));
+    expect(findings).toEqual([]);
+  });
+
+  // --- C4: deployment-path references whose basename exists elsewhere -------
+
+  it('downgrades a deployment/install path whose basename exists elsewhere to info/low', async () => {
+    const doc = parseMarkdown(
+      '.claude/skills/confluence/SKILL.md',
+      'Deploys to `.github/skills/confluence/confluence_api.py`.\n',
+    );
+    const files = [
+      '.claude/skills/confluence/SKILL.md',
+      'plugins/confluence/confluence_api.py',
+      '.github/workflows/ci.yml',
+    ];
+    const findings = await skillResources.run(ctxOf([doc], files));
+    expect(findings).toHaveLength(1);
+    const f = findings[0]!;
+    expect(f.severity).toBe('info');
+    expect(f.confidence).toBe('low');
+    expect(f.message).toContain('confluence_api.py');
+  });
+
+  it('still errors on a missing resource whose basename exists nowhere', async () => {
+    const doc = parseMarkdown('.claude/skills/foo/SKILL.md', 'Run `helper.py`.\n');
+    const findings = await skillResources.run(
+      ctxOf([doc], ['.claude/skills/foo/SKILL.md', 'src/other.py']),
+    );
+    expect(findings).toHaveLength(1);
+    const f = findings[0]!;
+    expect(f.severity).toBe('error');
+    expect(f.confidence).toBe('high');
+    expect(f.message).toContain('helper.py');
+  });
 });
 
 describe('gitignore awareness in path checks', () => {
@@ -409,12 +574,14 @@ describe('gitignore awareness in path checks', () => {
 });
 
 describe('skillResources output-dir convention', () => {
-  it('downgrades bare single-segment dir references like `tasks/` to info/low', async () => {
+  it('downgrades bare single-segment dir references like `./tasks/` to info/low', async () => {
     const doc = parseMarkdown(
       '.claude/skills/prd/SKILL.md',
-      '# PRD\n\nSave output to `tasks/` as markdown. Also see `references/deep/x.md`.\n',
+      '# PRD\n\nSave output to `./tasks/` as markdown. Also see `references/deep/x.md`.\n',
     );
-    const findings = await skillResources.run(ctxOf([doc], [], []));
+    // `references` is a real top-level repo dir here, so a missing nested file
+    // under it is still genuine drift; `./tasks/` is a runtime output dir.
+    const findings = await skillResources.run(ctxOf([doc], [], ['references']));
     const tasks = findings.find((f) => f.message.includes('tasks/'));
     expect(tasks?.severity).toBe('info');
     expect(tasks?.confidence).toBe('low');

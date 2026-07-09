@@ -3,16 +3,24 @@
  * runnable — package scripts must exist in package.json, and files passed
  * to interpreters must exist on disk.
  */
+import { posix } from 'node:path';
 import type { Check, Confidence, DocFile, Finding } from '../types.js';
 import { isNoiseToken, resolveCandidate } from './pathExists.js';
 import { filterIgnored } from '../repo/ignored.js';
 import { caseCorrectToken } from '../fix.js';
+import { parseCd, nextCwd } from './cwd.js';
 
 export interface ExtractedCommand {
   cmd: string;
   /** 1-based line in the doc. */
   line: number;
   fromFence: boolean;
+  /**
+   * Virtual working directory (repo-root-relative) established by a preceding
+   * `cd`/`pushd` in the same fenced block. Absent when there was no `cd`
+   * (repo-root base); `null` when the cwd is untrackable (`cd $VAR`, etc.).
+   */
+  cwd?: string | null;
 }
 
 /** Fence languages treated as shell. */
@@ -68,6 +76,8 @@ export function extractCommands(doc: DocFile): ExtractedCommand[] {
     if (!SHELL_LANGS.has(block.lang)) continue;
     const codeLines = block.code.split('\n');
     let heredocEnd: string | null = null;
+    // Virtual cwd for this block: '' = repo-root base, null = untrackable.
+    let cwd: string | null = '';
     for (let i = 0; i < codeLines.length; i++) {
       // Heredoc bodies are data, not commands.
       if (heredocEnd !== null) {
@@ -89,7 +99,11 @@ export function extractCommands(doc: DocFile): ExtractedCommand[] {
       for (const seg of splitChained(line)) {
         const cmd = stripEnvAndSudo(seg);
         if (cmd.length === 0) continue;
-        out.push({ cmd, line: lineNo, fromFence: true });
+        // Attach the cwd in effect *before* this segment runs, then let a
+        // leading `cd`/`pushd` advance it for subsequent segments/lines.
+        out.push({ cmd, line: lineNo, fromFence: true, ...(cwd !== '' ? { cwd } : {}) });
+        const cdArg = parseCd(cmd);
+        if (cdArg !== null) cwd = nextCwd(cwd, cdArg);
       }
     }
   }
@@ -145,7 +159,7 @@ export const commandExists: Check = {
     const pending: { finding: Finding; keys: string[] }[] = [];
 
     for (const doc of ctx.docs) {
-      for (const { cmd, line, fromFence } of extractCommands(doc)) {
+      for (const { cmd, line, fromFence, cwd } of extractCommands(doc)) {
         const location = { file: doc.path, line };
         const confidence: Confidence = fromFence ? 'high' : 'medium';
 
@@ -213,10 +227,18 @@ export const commandExists: Check = {
         if (rawPath.startsWith('/')) continue;
         if (isNoiseToken(rawPath)) continue;
         if (!rawPath.includes('/') && !FILE_EXT_RE.test(rawPath)) continue;
+        // Ran under an untrackable cwd (`cd $VAR`, `cd /abs`, …) — we cannot
+        // resolve the arg, so suppress rather than risk a false positive.
+        if (cwd === null) continue;
 
         const path = rawPath.startsWith('./') ? rawPath.slice(2) : rawPath;
-        // Resolve from the repo root and from the doc's own directory.
+        // Resolve from the repo root, the doc's own directory, and any virtual
+        // cwd established by a preceding `cd`/`pushd` in the same block.
         const resolutions = resolveCandidate(doc.path, path);
+        if (typeof cwd === 'string' && cwd.length > 0) {
+          const underCwd = posix.normalize(posix.join(cwd, path));
+          if (!resolutions.includes(underCwd)) resolutions.push(underCwd);
+        }
         if (resolutions.some((r) => repo.files.has(r))) continue;
 
         const actual = resolutions

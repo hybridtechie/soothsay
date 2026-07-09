@@ -50,6 +50,9 @@ export const linkValid: Check = {
       for (const link of doc.links) {
         const href = link.href;
         if (SCHEME_RE.test(href)) continue; // external / mailto / image URL
+        // Template placeholder / runtime interpolation, e.g. `{ComponentName}`,
+        // `{imageUrl}`, `<runtime>` — not a real link target.
+        if (/[<>{}]/.test(href)) continue;
         const location = { file: doc.path, line: link.line };
 
         // Same-file anchor.
@@ -96,13 +99,37 @@ export const linkValid: Check = {
                 : {}),
             });
           } else {
-            findings.push({
-              check: 'link-valid',
-              severity: 'error',
-              confidence: 'high',
-              message: `Broken link \`${href}\` — target not found`,
-              location,
-            });
+            // C6: catalog skills reference sibling assets (`../other-skill/
+            // SKILL.md`) assuming co-location at install time; in-repo they
+            // live under different plugin trees. Retry by the `<parentDir>/
+            // <basename>` suffix — only for relative sibling refs, and only
+            // when it resolves UNIQUELY, so a genuine broken link still errors.
+            let downgraded = false;
+            if (pathPart.includes('../')) {
+              const suffix = `${posix.basename(posix.dirname(pathPart))}/${posix.basename(pathPart)}`;
+              const matches = [...repo.files].filter(
+                (f) => f === suffix || f.endsWith(`/${suffix}`),
+              );
+              if (matches.length === 1) {
+                findings.push({
+                  check: 'link-valid',
+                  severity: 'info',
+                  confidence: 'low',
+                  message: `Link \`${href}\` — sibling asset resolves at \`${matches[0]}\` under a flattened install layout`,
+                  location,
+                });
+                downgraded = true;
+              }
+            }
+            if (!downgraded) {
+              findings.push({
+                check: 'link-valid',
+                severity: 'error',
+                confidence: 'high',
+                message: `Broken link \`${href}\` — target not found`,
+                location,
+              });
+            }
           }
           continue;
         }

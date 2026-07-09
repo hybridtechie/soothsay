@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseMarkdown } from '../src/parser/markdown.js';
 import { commandExists, extractCommands } from '../src/checks/commandExists.js';
+import { parseCd, nextCwd } from '../src/checks/cwd.js';
 import { packageManagerConsistent } from '../src/checks/packageManagerConsistent.js';
 import { frontmatterValid } from '../src/checks/frontmatterValid.js';
 import { toolClaims } from '../src/checks/toolClaims.js';
@@ -112,6 +113,31 @@ describe('extractCommands: heredocs, sudo/env prefixes, continuations', () => {
     const doc = parseMarkdown('CLAUDE.md', '```bash\npnpm run \\\n  build\n```\n');
     const cmds = extractCommands(doc);
     expect(cmds).toEqual([{ cmd: 'pnpm run build', line: 2, fromFence: true }]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// cwd tracking (parseCd / nextCwd)
+// ---------------------------------------------------------------------------
+
+describe('parseCd / nextCwd', () => {
+  it('parseCd recognizes cd and pushd, ignores other commands', () => {
+    expect(parseCd('cd scripts')).toBe('scripts');
+    expect(parseCd('pushd a/b')).toBe('a/b');
+    expect(parseCd('python3 x.py')).toBeNull();
+    expect(parseCd('cd')).toBeNull();
+  });
+
+  it('nextCwd joins relative dirs and marks untrackable ones null', () => {
+    expect(nextCwd('', 'scripts')).toBe('scripts');
+    expect(nextCwd('scripts', 'office')).toBe('scripts/office');
+    expect(nextCwd('scripts/office', '..')).toBe('scripts');
+    expect(nextCwd('', '$DIR')).toBeNull();
+    expect(nextCwd('', '/abs')).toBeNull();
+    expect(nextCwd('', '~')).toBeNull();
+    expect(nextCwd('', '-')).toBeNull();
+    expect(nextCwd('', '..')).toBeNull();
+    expect(nextCwd(null, 'scripts')).toBeNull();
   });
 });
 
@@ -286,6 +312,38 @@ describe('commandExists', () => {
     expect(findings[0]!.message).toContain('"deploy"');
   });
 
+  // --- C3: track `cd` / working directory inside code blocks ---------------
+
+  it('resolves a script through a preceding `cd` on the same line', async () => {
+    const doc = parseMarkdown('CLAUDE.md', '```bash\ncd scripts && python3 build.py\n```\n');
+    const findings = await commandExists.run(
+      makeCtx([doc], { files: new Set(['scripts/build.py', 'package.json']) }),
+    );
+    expect(findings).toEqual([]);
+  });
+
+  it('tracks `cd` across lines of the same block', async () => {
+    const doc = parseMarkdown('CLAUDE.md', '```bash\ncd scripts\npython3 build.py\n```\n');
+    const findings = await commandExists.run(
+      makeCtx([doc], { files: new Set(['scripts/build.py', 'package.json']) }),
+    );
+    expect(findings).toEqual([]);
+  });
+
+  it('suppresses a file check when the cwd is untrackable (`cd $VAR`)', async () => {
+    const doc = parseMarkdown('CLAUDE.md', '```bash\ncd $DIR && python3 x.py\n```\n');
+    const findings = await commandExists.run(makeCtx([doc]));
+    expect(findings).toEqual([]);
+  });
+
+  it('still flags a missing file when there is no `cd` context', async () => {
+    const doc = parseMarkdown('CLAUDE.md', '```bash\npython3 nope.py\n```\n');
+    const findings = await commandExists.run(makeCtx([doc]));
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe('error');
+    expect(findings[0]!.message).toContain('nope.py');
+  });
+
   it('skips gitignored missing files but still flags tracked drift', async () => {
     const gitRoot = mkdtempSync(join(tmpdir(), 'soothsay-cmd-ignored-'));
     try {
@@ -396,6 +454,37 @@ describe('frontmatterValid', () => {
     expect(findings).toHaveLength(1);
     expect(findings[0]!.severity).toBe('error');
     expect(findings[0]!.confidence).toBe('high');
+    expect(findings[0]!.message).toMatch(/no frontmatter/i);
+  });
+
+  it('reports a parse error (not "no frontmatter") for malformed SKILL.md YAML', async () => {
+    const doc = parseMarkdown(
+      '.claude/skills/foo/SKILL.md',
+      '---\nname: foo\ndescription: Triggers on: build, deploy\n---\n\n# Foo\n',
+    );
+    const findings = await frontmatterValid.run(makeCtx([doc]));
+    expect(findings).toHaveLength(1);
+    const f = findings[0]!;
+    expect(f.severity).toBe('error');
+    expect(f.confidence).toBe('high');
+    expect(f.message).toMatch(/failed to parse/i);
+    expect(f.message).not.toMatch(/no frontmatter/i);
+    expect(f.suggestion).toBeTruthy();
+  });
+
+  it('reports a parse error (not "no frontmatter") for malformed agent-file YAML', async () => {
+    const doc = parseMarkdown(
+      '.claude/agents/helper.md',
+      '---\nname: helper\ndescription: Triggers on: build, deploy\n---\n\nBody.\n',
+    );
+    const findings = await frontmatterValid.run(makeCtx([doc]));
+    expect(findings).toHaveLength(1);
+    const f = findings[0]!;
+    expect(f.severity).toBe('error');
+    expect(f.confidence).toBe('high');
+    expect(f.message).toMatch(/failed to parse/i);
+    expect(f.message).not.toMatch(/no frontmatter/i);
+    expect(f.suggestion).toBeTruthy();
   });
 
   it('errors on SKILL.md missing description, warns on bad name format', async () => {

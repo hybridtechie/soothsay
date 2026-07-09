@@ -106,6 +106,25 @@ describe('parseMarkdown', () => {
     expect(bad.frontmatter).toBeNull();
     expect(bad.headings.map((h) => h.text)).toEqual(['ok']);
   });
+
+  it('captures the YAML error when frontmatter fences are present but fail to parse', () => {
+    const bad = parseMarkdown(
+      '.claude/skills/my-skill/SKILL.md',
+      '---\nname: my-skill\ndescription: Triggers on: build, deploy\n---\n\n# Heading\n',
+    );
+    expect(bad.frontmatter).toBeNull();
+    expect(typeof bad.frontmatterError).toBe('string');
+    expect(bad.frontmatterError!.length).toBeGreaterThan(0);
+  });
+
+  it('leaves frontmatterError undefined for valid frontmatter', () => {
+    expect(doc.frontmatterError).toBeUndefined();
+  });
+
+  it('leaves frontmatterError undefined when there are no frontmatter fences', () => {
+    const plain = parseMarkdown('x.md', '# Hi\n\nJust text.');
+    expect(plain.frontmatterError).toBeUndefined();
+  });
 });
 
 describe('parseMarkdown: setext headings', () => {

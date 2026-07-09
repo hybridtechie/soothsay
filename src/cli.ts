@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
-import { resolve } from 'node:path';
-import { writeFileSync, existsSync, readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { writeFileSync, existsSync, readFileSync, mkdirSync } from 'node:fs';
 import { loadProject, runChecks, verdict } from './engine.js';
 import { allChecks } from './checks/index.js';
 import { runAiAdvisor } from './ai/advisor.js';
@@ -9,7 +9,8 @@ import { buildAdvisoryTask, ingestAdvisories } from './ai/host-agent.js';
 import { bless } from './freshness/bless.js';
 import { applyFixes } from './fix.js';
 import { buildInitConfig } from './init.js';
-import { renderGithub, renderJson, renderTty } from './report/render.js';
+import { renderGithub, renderHtml, renderJson, renderTty } from './report/render.js';
+import { openInBrowser } from './report/open.js';
 
 const HELP = `soothsay — your agent docs make claims. soothsay proves them.
 
@@ -20,6 +21,11 @@ Usage:
     --strict                Fail on warnings too
     --fix                   Apply safe autofixes (path casing, package-manager
                             rewrites), then re-check
+    --html                  Also write a self-contained HTML report
+                            (soothsay-report.html)
+    --html-file <path>      Write the HTML report to <path> (implies --html)
+    --open                  Write the HTML report and open it in your browser
+                            when there are findings (skipped under CI)
     --ai                    Add the opt-in AI advisory pass (needs ANTHROPIC_API_KEY)
     --ai-budget <tokens>    Input-token ceiling for --ai (default 150000)
     --ai-model <model>      Model for --ai (default claude-haiku-4-5)
@@ -37,17 +43,17 @@ Docs: https://github.com/hybridtechie/soothsay`;
 
 const EXPLANATIONS: Record<string, string> = {
   'path-exists':
-    'A file path mentioned in a doc does not exist in the repo (or differs by case). Fix the doc, restore the file, or rename to the exact case.',
+    'A file path mentioned in a doc does not exist in the repo (or differs by case). Fix the doc, restore the file, or rename to the exact case. A slashed token is only treated as a path when it has a file extension, a ./ or ../ prefix, or a real top-level repo dir as its first segment — namespaced ids like microsoft/azure-devops-mcp or Microsoft.Web/sites are ignored.',
   'link-valid':
     'A markdown link points at a missing file or a heading anchor that does not exist. Update the link target or the heading.',
   'skill-resource-exists':
-    'A SKILL.md references a script/resource that is missing from the skill directory. Skills silently fail when their resources are gone.',
+    'A SKILL.md references a script/resource that is missing from the skill directory. Skills silently fail when their resources are gone. Runtime-generated paths (top-level dir absent from the repo) and deployment/install paths whose basename exists elsewhere are downgraded to info.',
   'command-exists':
     'A documented command refers to a package.json script or script file that does not exist. Update the doc or add the script.',
   'package-manager':
     'A doc instructs a different package manager than the repo declares (packageManager field / lockfile). Mixed instructions corrupt lockfiles.',
   'frontmatter-valid':
-    'A SKILL.md or agent file is missing required frontmatter (name, description) or has a malformed tools list.',
+    'A SKILL.md or agent file is missing required frontmatter (name, description) or has a malformed tools list. Frontmatter that is present but fails to parse (e.g. an unquoted description containing a colon-space) is reported as a parse error — quote the offending scalar.',
   'tool-claim-mismatch':
     'An agent file claims to be read-only in prose but its frontmatter grants write-capable tools. The prose lies; agents get the tools.',
   freshness:
@@ -70,6 +76,9 @@ async function main(): Promise<number> {
       github: { type: 'boolean', default: false },
       strict: { type: 'boolean', default: false },
       fix: { type: 'boolean', default: false },
+      html: { type: 'boolean', default: false },
+      'html-file': { type: 'string' },
+      open: { type: 'boolean', default: false },
       ai: { type: 'boolean', default: false },
       'ai-budget': { type: 'string' },
       'ai-model': { type: 'string' },
@@ -202,6 +211,26 @@ async function main(): Promise<number> {
       if (values.json) console.log(renderJson(findings, v, values.fix ? fixed : undefined));
       else if (values.github) console.log(renderGithub(findings));
       else console.log(renderTty(findings, v, values.fix ? fixed : undefined));
+
+      // HTML report is a side output — coexists with any stdout mode. Notices
+      // go to stderr so --json / --github stdout stays pipeable.
+      if (values.html || values['html-file'] || values.open) {
+        const out = resolve(root, values['html-file'] ?? 'soothsay-report.html');
+        mkdirSync(dirname(out), { recursive: true });
+        writeFileSync(out, renderHtml(findings, v, values.fix ? fixed : undefined));
+        console.error(`soothsay: HTML report written to ${out}`);
+
+        if (values.open) {
+          if (findings.length === 0) {
+            console.error('soothsay: no findings — not opening the browser');
+          } else if (process.env.CI) {
+            console.error('soothsay: CI detected — not opening the browser');
+          } else {
+            openInBrowser(out);
+          }
+        }
+      }
+
       return v.failed ? 1 : 0;
     }
   }

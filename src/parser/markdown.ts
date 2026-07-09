@@ -88,6 +88,7 @@ export function parseMarkdown(path: string, text: string): DocFile {
 
   // --- frontmatter -------------------------------------------------------
   let frontmatter: Record<string, unknown> | null = null;
+  let frontmatterError: string | undefined;
   let bodyStart = 0;
   if (lines[0]?.trim() === '---') {
     const close = lines.findIndex((l, i) => i > 0 && l.trim() === '---');
@@ -99,8 +100,9 @@ export function parseMarkdown(path: string, text: string): DocFile {
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
           frontmatter = parsed as Record<string, unknown>;
         }
-      } catch {
+      } catch (err) {
         frontmatter = null;
+        frontmatterError = (err as Error).message.split('\n')[0];
       }
     }
   }
@@ -260,5 +262,16 @@ export function parseMarkdown(path: string, text: string): DocFile {
     });
   }
 
-  return { path, text, lines, frontmatter, headings, codeBlocks, inlineCodes, links, comments };
+  return {
+    path,
+    text,
+    lines,
+    frontmatter,
+    frontmatterError,
+    headings,
+    codeBlocks,
+    inlineCodes,
+    links,
+    comments,
+  };
 }

@@ -9,6 +9,16 @@ Note on new checks: adding a check is a **minor** release, but new checks can su
 
 ## [Unreleased]
 
+### Fixed
+
+False-positive reduction for "producer"/catalog repos — skill and agent catalogs whose docs describe paths that resolve in a consuming project, after a `cd`, or after install, which soothsay wrongly failed CI on:
+
+- **`path-exists` / `skill-resource-exists`: a lone slash no longer makes a token a file path.** A slashed token is treated as a path only when it has a file extension, a `./`/`../` prefix, or a first segment that is a real top-level repo directory. MCP tool ids (`microsoft/azure-devops-mcp`), ARM resource types (`Microsoft.Web/sites`), BDD keywords (`Given/When/Then`), branch names, option markers, and JSON field paths are no longer reported.
+- **`skill-resource-exists`: runtime and deployment paths are downgraded to info, not CI-failing errors.** A reference whose top-level directory is absent from the repo (a runtime-generated artifact) or whose basename exists elsewhere (a deployment/install path) is now info/low.
+- **`link-valid`: template and sibling-asset links no longer error.** Template hrefs (`{ComponentName}`, `{imageUrl}`) are skipped; a `../`-relative sibling-asset link that resolves uniquely elsewhere (a flattened install layout) is downgraded to info.
+- **`command-exists` / `skill-resource-exists`: working-directory tracking.** A `cd`/`pushd` earlier in a shell block sets the directory used to resolve interpreter arguments; commands run under an untrackable `cd` (a variable, an absolute or home path) are no longer flagged.
+- **`frontmatter-valid`: parse errors are distinguished from missing frontmatter.** Frontmatter that is present but fails to parse (e.g. an unquoted `description:` value containing a `': '` sequence) now reports the parse error with a quoting suggestion, instead of the misleading "has no frontmatter".
+
 ## [0.1.1] - 2026-07-08
 
 ### Added
@@ -43,6 +53,6 @@ Initial release.
 - **GitHub Action** (`action.yml`): composite action running `soothsay check --github` with `path` and `strict` inputs.
 - Programmatic API: `loadProject`, `runChecks`, `allChecks`, `verdict`.
 
-[Unreleased]: https://github.com/hybridtechie/soothsay/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/hybridtechie/soothsay/compare/v0.1.2...HEAD
 [0.1.1]: https://github.com/hybridtechie/soothsay/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/hybridtechie/soothsay/releases/tag/v0.1.0

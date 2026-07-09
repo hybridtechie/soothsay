@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderGithub, renderJson, renderTty } from '../src/report/render.js';
+import { renderGithub, renderHtml, renderJson, renderTty } from '../src/report/render.js';
 import { verdict } from '../src/engine.js';
 import type { Finding } from '../src/types.js';
 
@@ -75,5 +75,66 @@ describe('renderJson / renderTty', () => {
 
   it('renderTty reports a clean pass', () => {
     expect(renderTty([], verdict([]))).toContain('no findings');
+  });
+});
+
+describe('renderHtml', () => {
+  it('emits a self-contained HTML document with inline styles and no external refs', () => {
+    const html = renderHtml([finding({})], verdict([finding({})]));
+    expect(html).toMatch(/^<!doctype html>/i);
+    expect(html).toContain('<html');
+    expect(html).toContain('</html>');
+    expect(html).toContain('<style>');
+    // Lightweight + offline: nothing loaded from the network.
+    expect(html).not.toMatch(/<script\b/i);
+    expect(html).not.toMatch(/https?:\/\//);
+  });
+
+  it('groups findings by file and shows message, check, line and suggestion', () => {
+    const fs = [
+      finding({ message: 'missing target', suggestion: 'restore docs/gone.md' }),
+      finding({ location: { file: 'b.md', line: 7 }, check: 'link-valid' }),
+    ];
+    const html = renderHtml(fs, verdict(fs));
+    expect(html).toContain('CLAUDE.md');
+    expect(html).toContain('b.md');
+    expect(html).toContain('missing target');
+    expect(html).toContain('restore docs/gone.md');
+    expect(html).toContain('path-exists');
+    expect(html).toContain('link-valid');
+    expect(html).toContain('7');
+  });
+
+  it('states the verdict and the severity tallies', () => {
+    const fs = [finding({}), finding({ severity: 'warning', confidence: 'low' })];
+    const html = renderHtml(fs, verdict(fs));
+    expect(html).toContain('FAIL');
+    const clean = renderHtml([], verdict([]));
+    expect(clean).toContain('PASS');
+    expect(clean).toContain('no findings');
+  });
+
+  it('escapes HTML in every field so a doc cannot inject markup', () => {
+    const html = renderHtml(
+      [
+        finding({
+          message: '<script>alert(1)</script>',
+          suggestion: 'use <b>bold</b> & "quotes"',
+          location: { file: '<img src=x>.md', line: 1 },
+        }),
+      ],
+      verdict([]),
+    );
+    expect(html).not.toContain('<script>alert(1)</script>');
+    expect(html).not.toContain('<img src=x>');
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).toContain('&amp;');
+  });
+
+  it('shows lower-than-high confidence and an applied-autofix note', () => {
+    const fs = [finding({ confidence: 'medium' })];
+    const html = renderHtml(fs, verdict(fs), 3);
+    expect(html).toContain('medium');
+    expect(html).toContain('3');
   });
 });

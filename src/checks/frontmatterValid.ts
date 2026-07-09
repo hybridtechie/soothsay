@@ -28,6 +28,18 @@ function warning(doc: DocFile, message: string): Finding {
   };
 }
 
+function parseError(doc: DocFile, kind: string): Finding {
+  return {
+    check: 'frontmatter-valid',
+    severity: 'error',
+    confidence: 'high',
+    message: `${kind} frontmatter present but failed to parse: ${doc.frontmatterError}`,
+    location: { file: doc.path, line: 1 },
+    suggestion:
+      "Quote any scalar value containing ': ' (e.g. wrap the description in double quotes: description: \"Triggers on: build, deploy\").",
+  };
+}
+
 function checkNameAndDescription(doc: DocFile, fm: Record<string, unknown>, kind: string): Finding[] {
   const findings: Finding[] = [];
   if (typeof fm['name'] !== 'string') {
@@ -54,6 +66,10 @@ export const frontmatterValid: Check = {
 
     for (const doc of ctx.docs) {
       if (doc.path.endsWith('SKILL.md')) {
+        if (doc.frontmatterError) {
+          findings.push(parseError(doc, 'SKILL.md'));
+          continue;
+        }
         if (!doc.frontmatter) {
           findings.push(error(doc, 'SKILL.md has no frontmatter (name and description required)'));
           continue;
@@ -63,6 +79,10 @@ export const frontmatterValid: Check = {
       }
 
       if (AGENT_PATH_RE.test(doc.path)) {
+        if (doc.frontmatterError) {
+          findings.push(parseError(doc, 'agent file'));
+          continue;
+        }
         if (!doc.frontmatter) {
           findings.push(error(doc, 'agent file has no frontmatter (name and description required)'));
           continue;
