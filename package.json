@@ -1,6 +1,6 @@
 {
   "name": "@njtp/soothsay",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Your agent docs make claims. Soothsay proves them. Verifies CLAUDE.md, AGENTS.md, SKILL.md and agent config files against the actual codebase.",
   "keywords": [
     "claude",
