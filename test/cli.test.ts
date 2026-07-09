@@ -191,4 +191,44 @@ describe('soothsay CLI', () => {
     expect(r.stdout).toContain('soothsay check');
     expect(r.stdout).toContain('bless');
   });
+
+  it('advise --emit-task prints the review task the host agent completes', () => {
+    const r = cli(['advise', '.', '--emit-task'], driftedRepo);
+    expect(r.code).toBe(0);
+    const task = JSON.parse(r.stdout);
+    expect(task.task).toBe('advisory-review');
+    expect(typeof task.system).toBe('string');
+    expect(task.corpus).toContain('=== CLAUDE.md ===');
+    expect(task.schema.properties.findings).toBeDefined();
+    expect(task.docCount).toBeGreaterThan(0);
+  });
+
+  it('advise --ingest renders agent-produced findings and never fails CI', () => {
+    const root = mkdtempSync(join(tmpdir(), 'soothsay-cli-advise-'));
+    writeFileSync(join(root, 'README.md'), '# Clean\n');
+    writeFileSync(
+      join(root, 'findings.json'),
+      JSON.stringify({
+        findings: [
+          { kind: 'contradiction', file: 'README.md', line: 1, message: 'two docs disagree' },
+        ],
+      }),
+    );
+    const r = cli(['advise', '.', '--ingest', 'findings.json'], root);
+    // advisory output is never CI-blocking, even for a contradiction
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain('ai-advisory');
+    expect(r.stdout).toContain('contradiction');
+
+    const json = cli(['advise', '.', '--ingest', 'findings.json', '--json'], root);
+    const parsed = JSON.parse(json.stdout);
+    expect(parsed.findings[0].check).toBe('ai-advisory');
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('advise with neither flag prints usage and exits non-zero', () => {
+    const r = cli(['advise', '.'], cleanRepo);
+    expect(r.code).toBe(1);
+    expect(r.stdout).toContain('emit-task');
+  });
 });

@@ -78,7 +78,17 @@ Types: `feat`, `fix`, `docs`, `chore` (also fine: `test`, `refactor`). Scope is 
 
 ## Release process (maintainers)
 
-1. Update `CHANGELOG.md`: move entries from *Unreleased* into a new version section with today's date.
-2. `npm version <major|minor|patch>` — bumps package.json and creates the `vX.Y.Z` tag.
-3. Push with the tag: `git push && git push --tags`.
-4. The release workflow (`.github/workflows/release.yml`) runs tests, builds, publishes to npm with provenance, and creates the GitHub release with generated notes.
+Releases are automated: **every push to `main` publishes.** The
+[release workflow](.github/workflows/release.yml) decides the version bump, applies
+it, publishes to npm, pushes the bump back to `main`, and cuts the GitHub release
+with generated notes. There is no manual `npm version` or tagging.
+
+1. Before merging, update `CHANGELOG.md`: move entries from *Unreleased* into a new
+   version section dated today.
+2. Choose the bump via the merge commit message — **patch by default**; include
+   `#minor` for new features or `#major` for breaking changes (see the semver policy
+   above). The workflow bumps `package.json` and commits `chore(release): x.y.z [skip ci]`.
+3. Publishing uses **npm OIDC trusted publishing** — no `NPM_TOKEN` secret — and
+   provenance attestations are attached automatically. This requires a Trusted
+   Publisher configured on npmjs.com for this repo + `release.yml`; the release job
+   runs on Node 24 (its bundled npm satisfies the OIDC minimum of `npm >= 11.5.1`).

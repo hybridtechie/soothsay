@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
 import { resolve } from 'node:path';
-import { writeFileSync, existsSync } from 'node:fs';
+import { writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { loadProject, runChecks, verdict } from './engine.js';
 import { allChecks } from './checks/index.js';
 import { runAiAdvisor } from './ai/advisor.js';
+import { buildAdvisoryTask, ingestAdvisories } from './ai/host-agent.js';
 import { bless } from './freshness/bless.js';
 import { applyFixes } from './fix.js';
 import { buildInitConfig } from './init.js';
@@ -22,6 +23,10 @@ Usage:
     --ai                    Add the opt-in AI advisory pass (needs ANTHROPIC_API_KEY)
     --ai-budget <tokens>    Input-token ceiling for --ai (default 150000)
     --ai-model <model>      Model for --ai (default claude-haiku-4-5)
+  soothsay advise [path]    Layer 3 advisory using the calling agent as the LLM
+    --emit-task             Print the review task (system + corpus + schema) as
+                            JSON for the host agent to complete — no API key
+    --ingest <file>         Fold the host agent's findings JSON back into a report
   soothsay bless <file> [--section <slug>] [--date YYYY-MM-DD]
                             Mark fresh: directives in <file> as re-verified today
   soothsay init [path]      Scan the repo, detect its sources of truth, and
@@ -68,6 +73,8 @@ async function main(): Promise<number> {
       ai: { type: 'boolean', default: false },
       'ai-budget': { type: 'string' },
       'ai-model': { type: 'string' },
+      'emit-task': { type: 'boolean', default: false },
+      ingest: { type: 'string' },
       section: { type: 'string' },
       date: { type: 'string' },
       help: { type: 'boolean', short: 'h', default: false },
@@ -80,12 +87,47 @@ async function main(): Promise<number> {
   }
 
   const [first, ...rest] = positionals;
-  const command = ['check', 'bless', 'init', 'explain'].includes(first ?? 'check')
+  const command = ['check', 'bless', 'init', 'explain', 'advise'].includes(first ?? 'check')
     ? (first ?? 'check')
     : 'check';
   const args = command === first ? rest : positionals;
 
   switch (command) {
+    case 'advise': {
+      const root = resolve(args[0] ?? '.');
+      const ctx = await loadProject(root);
+
+      if (values['emit-task']) {
+        console.log(JSON.stringify(buildAdvisoryTask(ctx), null, 2));
+        return 0;
+      }
+
+      if (values.ingest) {
+        let raw: unknown;
+        try {
+          raw = JSON.parse(readFileSync(resolve(values.ingest), 'utf8'));
+        } catch {
+          console.error(`soothsay: could not read advisory findings from ${values.ingest}`);
+          return 1;
+        }
+        const findings = ingestAdvisories(raw);
+        // Advisory output never blocks CI, so render the verdict non-strict and
+        // always exit 0 regardless of --strict.
+        const v = verdict(findings, false);
+        if (values.json) console.log(renderJson(findings, v));
+        else if (values.github) console.log(renderGithub(findings));
+        else console.log(renderTty(findings, v));
+        return 0;
+      }
+
+      console.error(
+        'Usage: soothsay advise [path] (--emit-task | --ingest <file>)\n' +
+          '  --emit-task      print the review task for the host agent to complete\n' +
+          '  --ingest <file>  fold the host agent’s findings JSON into a report',
+      );
+      return 1;
+    }
+
     case 'explain': {
       const id = args[0];
       if (!id || !EXPLANATIONS[id]) {

@@ -9,11 +9,18 @@ Note on new checks: adding a check is a **minor** release, but new checks can su
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-08
+
 ### Added
 
 - **`soothsay init` auto-detection.** `init` now scans the repo and scaffolds soothsay.yml with asserts derived from detected sources of truth: pins `package.json#packageManager` (`value_matches_source`), forbids the other package managers' mutating commands (`forbid_command`, skipping any the docs currently use), snapshots each agent file's `tools:` grants (`tools_subset`), and requires documented workflow commands to stay documented (`require_command` for `test`/`build`/`lint`/`typecheck` scripts the docs instruct). Every proposal is verified against the current repo and docs before writing, so the scaffolded config always passes on day one. Falls back to the commented example when nothing is detectable.
 - **`soothsay check --fix` — safe autofixes.** Findings now carry machine-applicable rewrites where the fix is provably correct: path/link/command case corrections (from `path-exists`, `link-valid`, `command-exists`) and package-manager command translations that preserve intent (`npm ci` → `pnpm install --frozen-lockfile`, `npm i -D x` → `pnpm add x -D`; unknown flags, global installs, and negative examples are never rewritten). `--fix` applies them and re-checks from disk; plain `check` reports how many findings are auto-fixable. JSON output gains a `summary.fixed` count when `--fix` is used, and findings expose an optional `fix` object.
 - Programmatic API: `applyFixes`, `caseCorrectToken`, `buildInitConfig`.
+- README: a "What soothsay catches — and how it fixes it" reference table covering every check id, its severity/confidence tier, and its fix path (`--fix` autofix, `bless`, or manual).
+
+### Changed
+
+- CI now publishes to npm via **OIDC trusted publishing** (Node 24, automatic provenance attestations), replacing the token-based publish.
 
 ## [0.1.0] - 2026-07-04
 
@@ -36,5 +43,6 @@ Initial release.
 - **GitHub Action** (`action.yml`): composite action running `soothsay check --github` with `path` and `strict` inputs.
 - Programmatic API: `loadProject`, `runChecks`, `allChecks`, `verdict`.
 
-[Unreleased]: https://github.com/hybridtechie/soothsay/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/hybridtechie/soothsay/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/hybridtechie/soothsay/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/hybridtechie/soothsay/releases/tag/v0.1.0

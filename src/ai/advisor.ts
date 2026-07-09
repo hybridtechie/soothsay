@@ -2,6 +2,13 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { CheckContext, Finding } from '../types.js';
+import {
+  ADVISORY_OUTPUT_SCHEMA,
+  ADVISORY_SYSTEM_PROMPT,
+  buildAdvisoryCorpus,
+  mapAdvisories,
+  type RawAdvisory,
+} from './host-agent.js';
 
 /**
  * Layer 3 — opt-in AI advisory pass.
@@ -42,34 +49,9 @@ const DEFAULT_MODEL = 'claude-haiku-4-5';
 const DEFAULT_BUDGET = 150_000;
 const CACHE_FILE = '.soothsay-cache.json';
 
-const OUTPUT_SCHEMA = {
-  type: 'object',
-  properties: {
-    findings: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          kind: { type: 'string', enum: ['contradiction', 'vague', 'untyped_claim'] },
-          file: { type: 'string' },
-          line: { type: 'integer' },
-          message: { type: 'string' },
-          suggestion: { type: 'string' },
-        },
-        required: ['kind', 'file', 'line', 'message', 'suggestion'],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ['findings'],
-  additionalProperties: false,
-} as const;
-
-const SYSTEM_PROMPT = `You review AI-agent instruction files (CLAUDE.md, AGENTS.md, SKILL.md, README) for a verification tool. Report only high-signal issues of three kinds:
-- contradiction: two docs (or two places in one doc) give incompatible instructions.
-- vague: an instruction an agent cannot act on deterministically (no command, no scope, no criterion).
-- untyped_claim: a checkable technical claim (a command, a path, a version) stated only in prose that the repo could verify.
-Use the exact repo-relative file paths and 1-based line numbers from the input. Be conservative: silence beats noise.`;
+// The advisory contract (system prompt, output schema, corpus shape, finding
+// mapping) is owned by host-agent.ts so the API and host-agent providers stay
+// in lockstep.
 
 function info(message: string): Finding {
   return {
@@ -116,14 +98,9 @@ export async function runAiAdvisor(
     };
   }
 
-  const corpus = ctx.docs
-    .map((d) => {
-      const numbered = d.lines.map((l, i) => `${i + 1}: ${l}`).join('\n');
-      return `=== ${d.path} ===\n${numbered}`;
-    })
-    .join('\n\n');
+  const corpus = buildAdvisoryCorpus(ctx.docs);
   const prompt = `Review these agent docs:\n\n${corpus}`;
-  const estimatedTokens = Math.ceil((prompt.length + SYSTEM_PROMPT.length) / 4);
+  const estimatedTokens = Math.ceil((prompt.length + ADVISORY_SYSTEM_PROMPT.length) / 4);
 
   if (estimatedTokens > budget) {
     return {
@@ -152,8 +129,8 @@ export async function runAiAdvisor(
     body: JSON.stringify({
       model,
       max_tokens: 8000,
-      system: SYSTEM_PROMPT,
-      output_config: { format: { type: 'json_schema', schema: OUTPUT_SCHEMA } },
+      system: ADVISORY_SYSTEM_PROMPT,
+      output_config: { format: { type: 'json_schema', schema: ADVISORY_OUTPUT_SCHEMA } },
       messages: [{ role: 'user', content: prompt }],
     }),
   });
@@ -179,7 +156,7 @@ export async function runAiAdvisor(
   }
   const text = body.content?.find((b) => b.type === 'text')?.text ?? '{"findings":[]}';
 
-  let parsed: { findings?: { kind: string; file: string; line: number; message: string; suggestion: string }[] };
+  let parsed: { findings?: RawAdvisory[] };
   try {
     parsed = JSON.parse(text);
   } catch {
@@ -190,14 +167,7 @@ export async function runAiAdvisor(
     };
   }
 
-  const findings: Finding[] = (parsed.findings ?? []).map((f) => ({
-    check: 'ai-advisory',
-    severity: f.kind === 'contradiction' ? ('warning' as const) : ('info' as const),
-    confidence: 'low' as const,
-    message: `[${f.kind}] ${f.message}`,
-    location: { file: f.file, line: f.line > 0 ? f.line : 1 },
-    ...(f.suggestion ? { suggestion: f.suggestion } : {}),
-  }));
+  const findings = mapAdvisories(parsed.findings ?? []);
 
   cache[cacheKey] = findings;
   try {

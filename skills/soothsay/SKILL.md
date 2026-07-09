@@ -17,6 +17,7 @@ Soothsay extracts checkable claims from agent instruction files and verifies the
 | A section was re-verified by a human and its freshness warning should clear | `npx --yes @njtp/soothsay bless <file>` (optionally `--section <slug>`) |
 | The project needs a sidecar config (ignores, disabled checks, assertions) | `npx --yes @njtp/soothsay init` — detects the repo's sources of truth (package manager, agent tool grants, documented scripts) and scaffolds verified asserts; edit soothsay.yml to taste |
 | A finding's check id is unclear | `npx --yes @njtp/soothsay explain <check-id>` |
+| Reason about contradictions/vagueness yourself, without an API key | `npx --yes @njtp/soothsay advise --emit-task` — see "Layer 3" below |
 
 Run from the project root. Exit code 1 means at least one high-confidence error (with `--strict`, warnings too).
 
@@ -48,14 +49,31 @@ Rules of thumb:
 - Findings with `low` confidence are hints; verify before acting.
 - If unsure whether a referenced file was deleted deliberately, check git history before editing the doc.
 
+## Layer 3 — you are the reviewer (no API key)
+
+Layers 0–2 are deterministic. Layer 3 is a *judgement* pass — cross-file contradictions, vague instructions, checkable claims stated only in prose — that needs an LLM. When soothsay runs inside a coding agent, **you are that LLM**: no `ANTHROPIC_API_KEY`, no separate model call. Drive it like this:
+
+1. Run the deterministic pass first: `npx --yes @njtp/soothsay check --json` and triage those findings.
+2. Get the review task: `npx --yes @njtp/soothsay advise --emit-task`. It prints JSON with `system` (your instructions as the reviewer), `corpus` (every scanned doc, path-headed, with 1-based line numbers), and `schema` (the exact output shape).
+3. **You** review the corpus against the `system` rubric — report only high-signal issues of three `kind`s: `contradiction`, `vague`, `untyped_claim`. Be conservative; silence beats noise. Cite the exact file path and line number from the corpus. Produce `{ "findings": [ { "kind", "file", "line", "message", "suggestion" }, ... ] }` matching the schema (empty `findings` is the right answer when nothing is wrong).
+4. Optionally fold your findings back into a soothsay report for the user: write them to a file and run `npx --yes @njtp/soothsay advise --ingest <file>` (add `--json` to parse). Advisory findings are never CI-blocking — they are review suggestions, not gates.
+
+Use `check --ai` instead only in headless CI where no agent is present (it calls the Anthropic API and needs `ANTHROPIC_API_KEY`). Inside an agent, prefer `advise --emit-task` — it is free and uses the model already reasoning about the repo.
+
 ## The freshness workflow
 
-Freshness directives bind a doc section to the code that can invalidate it:
+Freshness directives bind a doc section to the code that can invalidate it — a one-line HTML comment placed under a heading:
 
-1. Add a one-line HTML comment under a heading, for example: `<!-- fresh: verified=2026-07-08 watch=package.json,src/auth/** -->`. Choose watch globs that cover the code the section describes.
-2. Soothsay warns when any watched path has commits after the verified date.
-3. When that warning fires, **a human re-reads the section against the current code**. Fix anything stale.
-4. Only after review, re-stamp:
+```markdown
+## Authentication
+<!-- fresh: verified=2026-07-08 watch=package.json,src/auth/** -->
+```
+
+Choose watch globs that cover the code the section describes. Then:
+
+1. Soothsay warns when any watched path has commits after the verified date.
+2. When that warning fires, **a human re-reads the section against the current code**. Fix anything stale.
+3. Only after review, re-stamp:
 
 ```bash
 npx --yes @njtp/soothsay bless <file>
