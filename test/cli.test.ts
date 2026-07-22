@@ -120,6 +120,26 @@ describe('soothsay CLI', () => {
     rmSync(join(driftedRepo, 'out'), { recursive: true, force: true });
   });
 
+  it('does not write a report by default when output is piped (non-TTY)', () => {
+    // The auto-open/auto-write default only fires in an interactive terminal;
+    // a piped run (as here, and as in CI) must leave no report behind.
+    const root = mkdtempSync(join(tmpdir(), 'soothsay-cli-noauto-'));
+    writeFileSync(join(root, 'CLAUDE.md'), '# Rules\n\nSee [gone](docs/gone.md).\n');
+    const r = cli(['check', '.'], root);
+    expect(r.code).toBe(1);
+    expect(existsSync(join(root, 'soothsay-report.html'))).toBe(false);
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('check --no-open is accepted and writes no report when piped', () => {
+    const root = mkdtempSync(join(tmpdir(), 'soothsay-cli-noopen-'));
+    writeFileSync(join(root, 'CLAUDE.md'), '# Rules\n\nSee [gone](docs/gone.md).\n');
+    const r = cli(['check', '.', '--no-open'], root);
+    expect(r.code).toBe(1);
+    expect(existsSync(join(root, 'soothsay-report.html'))).toBe(false);
+    rmSync(root, { recursive: true, force: true });
+  });
+
   it('init scaffolds soothsay.yml then refuses to overwrite', () => {
     const root = mkdtempSync(join(tmpdir(), 'soothsay-cli-init-'));
     const first = cli(['init', '.'], root);

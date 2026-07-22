@@ -160,10 +160,24 @@ soothsay check --fix
 
 Applies the rewrites soothsay is *certain* about, then re-checks from disk: path and link casing (`FORMS.md → forms.md`) and package-manager command translations that preserve intent (`npm ci → pnpm install --frozen-lockfile`, `npm i -D vitest → pnpm add vitest -D`). Anything ambiguous — unknown flags, global installs, negative examples — is left alone and stays a finding. Plain `check` tells you how many findings are auto-fixable.
 
+## HTML report
+
+**By default, an interactive run that finds something writes a self-contained HTML report and opens it in your browser** — findings grouped by file, a PASS/FAIL verdict, severity tallies, and each finding's line, check id, message, and suggestion. It's a single offline file (inline CSS, no scripts, no network). The default report is written to a temp file, so it never clutters your repo.
+
+```bash
+soothsay check                 # finds drift → opens the report automatically
+soothsay check --no-open       # ...unless you'd rather it didn't
+soothsay check --html          # keep a persistent soothsay-report.html in the project
+soothsay check --html-file reports/docs.html
+```
+
+The auto-open is **suppressed** where a browser makes no sense: under CI (`$CI`), when output is piped (non-TTY), in machine modes (`--json` / `--github`), and with `--no-open`. Use `--html` to keep a persistent report artifact in the project dir (`--html-file <path>` redirects it; parent dirs are created), and `--open` to force-open even when output is piped. The report is a side output: it coexists with `--json` / `--github`, whose stdout stays pipeable (all report notices go to stderr).
+
 ## All commands
 
 ```
 soothsay check [path] [--json|--github] [--strict] [--fix] [--ai]
+                      [--no-open] [--html] [--html-file <path>] [--open]
 soothsay bless <file> [--section <slug>] [--date YYYY-MM-DD]
 soothsay init [path]          # detect sources of truth, scaffold a verified soothsay.yml
 soothsay explain <check-id>   # what a finding means and how to fix it

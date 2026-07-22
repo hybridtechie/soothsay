@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, join } from 'node:path';
 import { writeFileSync, existsSync, readFileSync, mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { loadProject, runChecks, verdict } from './engine.js';
 import { allChecks } from './checks/index.js';
 import { runAiAdvisor } from './ai/advisor.js';
@@ -11,6 +12,7 @@ import { applyFixes } from './fix.js';
 import { buildInitConfig } from './init.js';
 import { renderGithub, renderHtml, renderJson, renderTty } from './report/render.js';
 import { openInBrowser } from './report/open.js';
+import { planHtmlReport } from './report/plan.js';
 
 const HELP = `soothsay — your agent docs make claims. soothsay proves them.
 
@@ -21,11 +23,15 @@ Usage:
     --strict                Fail on warnings too
     --fix                   Apply safe autofixes (path casing, package-manager
                             rewrites), then re-check
-    --html                  Also write a self-contained HTML report
-                            (soothsay-report.html)
-    --html-file <path>      Write the HTML report to <path> (implies --html)
-    --open                  Write the HTML report and open it in your browser
-                            when there are findings (skipped under CI)
+    In an interactive terminal, a run that finds something writes a
+    self-contained HTML report and opens it in your browser by default.
+    --no-open                Don't auto-open the report (also suppressed under
+                            CI, when piped, and with --json/--github)
+    --html                  Write a persistent HTML report artifact
+                            (soothsay-report.html in the project dir)
+    --html-file <path>      Write the HTML report artifact to <path>
+    --open                  Force-open the report even when output is piped
+                            (still skipped under CI)
     --ai                    Add the opt-in AI advisory pass (needs ANTHROPIC_API_KEY)
     --ai-budget <tokens>    Input-token ceiling for --ai (default 150000)
     --ai-model <model>      Model for --ai (default claude-haiku-4-5)
@@ -79,6 +85,7 @@ async function main(): Promise<number> {
       html: { type: 'boolean', default: false },
       'html-file': { type: 'string' },
       open: { type: 'boolean', default: false },
+      'no-open': { type: 'boolean', default: false },
       ai: { type: 'boolean', default: false },
       'ai-budget': { type: 'string' },
       'ai-model': { type: 'string' },
@@ -213,21 +220,33 @@ async function main(): Promise<number> {
       else console.log(renderTty(findings, v, values.fix ? fixed : undefined));
 
       // HTML report is a side output — coexists with any stdout mode. Notices
-      // go to stderr so --json / --github stdout stays pipeable.
-      if (values.html || values['html-file'] || values.open) {
-        const out = resolve(root, values['html-file'] ?? 'soothsay-report.html');
+      // go to stderr so --json / --github stdout stays pipeable. By default an
+      // interactive run with findings writes a throwaway report and opens it;
+      // planHtmlReport() resolves every flag/environment combination.
+      const plan = planHtmlReport({
+        html: values.html,
+        ...(values['html-file'] !== undefined ? { htmlFile: values['html-file'] } : {}),
+        open: values.open,
+        noOpen: values['no-open'],
+        json: values.json,
+        github: values.github,
+        isTty: Boolean(process.stdout.isTTY),
+        isCI: Boolean(process.env.CI),
+        hasFindings: findings.length > 0,
+      });
+      if (plan.write) {
+        const out =
+          plan.location === 'file'
+            ? resolve(root, values['html-file'] ?? 'soothsay-report.html')
+            : plan.location === 'cwd'
+              ? resolve(root, 'soothsay-report.html')
+              : join(tmpdir(), 'soothsay-report.html');
         mkdirSync(dirname(out), { recursive: true });
         writeFileSync(out, renderHtml(findings, v, values.fix ? fixed : undefined));
         console.error(`soothsay: HTML report written to ${out}`);
-
-        if (values.open) {
-          if (findings.length === 0) {
-            console.error('soothsay: no findings — not opening the browser');
-          } else if (process.env.CI) {
-            console.error('soothsay: CI detected — not opening the browser');
-          } else {
-            openInBrowser(out);
-          }
+        if (plan.open) {
+          openInBrowser(out);
+          console.error('soothsay: opened the report in your browser (--no-open to disable)');
         }
       }
 
